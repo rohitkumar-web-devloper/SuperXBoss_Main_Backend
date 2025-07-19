@@ -5,7 +5,7 @@ const CategorySchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    photo: {
+    picture: {
         type: String,
         default: ""
     },
@@ -13,60 +13,38 @@ const CategorySchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         default: null
     },
-    role: {
+    description: {
         type: String,
         default: "admin"
     },
-    address: {
-        type: String,
-        default: null
-    },
-    mobile: {
-        type: String,
-        required: true,
+
+    featured: {
+        type: Boolean,
+        default: false,
         index: true,
-        unique: true
     },
-    whatsapp: {
+    trending: {
         type: String,
-        required: true,
-        index: true,
-        unique: true
+        default: "",
     },
-    countryCode: {
+    sorting: {
         type: String,
-        required: true,
+        default: "",
     },
-    email: {
-        type: String,
-        required: true,
-        index: true,
-        unique: true
-    },
-    type: {
-        type: String,
-        default: "vendor"
-    },
-    token: {
-        type: String,
-        default: ""
-    },
+
     status: {
         type: Boolean,
         default: true,
-        index: true,
     },
-    password: {
-        type: String,
-        validate: {
-            validator: function (value) {
-                if (this.type !== "customer") {
-                    return typeof value === "string" && value.trim().length > 0;
-                }
-                return true;
-            },
-            message: "Password is required for non-customer users"
-        }
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users",
+        default: null
+    },
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "users",
+        default: null
     },
 },
     {
