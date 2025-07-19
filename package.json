@@ -5,7 +5,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "cross-env node NODE_ENV=production &&  src/server.js",
-    "dev": "cross-env nodemon NODE_ENV=development && src/server.js"
+    "dev": "cross-env nodemon NODE_ENV=development && src/server.js",
+    "seed": "node src/seeders/userSeeder.js"
   },
   "repository": {
     "type": "git",

@@ -1,5 +1,5 @@
 const { error, success } = require("../../functions/functions");
-const { userValidationSchema, userLoginSchema } = require("../../Validation/user");
+const { userValidationSchema, userLoginSchema, userUpdateSchema } = require("../../Validation/user");
 const { UserModal } = require('../../schemas/user');
 const { hashPassword, comparePassword, generateToken } = require("../../Helper");
 const loginUser = async (_req, _res) => {
@@ -84,25 +84,108 @@ const createUser = async (_req, _res) => {
         }
         const haspassword = await hashPassword(value.password)
         const newUser = new UserModal({
-            ...value, password:haspassword, createdBy: {
+            ...value, password: haspassword, createdBy: {
                 _id,
                 name
             }
         });
         const savedUser = await newUser.save();
-        const {createdAt , updatedAt , access_token, password , ...rest } = savedUser.toObject()
+        const { createdAt, updatedAt, access_token, password, ...rest } = savedUser.toObject()
         return _res.status(201).json({
             message: 'User created successfully',
             user: rest
         });
     } catch (err) {
-        console.error('Create user error:', err);
+        return _res.status(500).json(error(500, "Internal server errror"));
+    }
+};
+
+
+const getUser = async (_req, _res) => {
+    try {
+        const { _id } = _req.user;
+
+        const users = await UserModal.find({ _id: { $ne: _id } });
+
+        return _res.status(200).json(success(users, "User fetch successfully"));
+
+    } catch (err) {
         return _res.status(500).json(error(500, "Internal server errror"));
     }
 };
 
 const updateUser = async (_req, _res) => {
-    return
-}
+    try {
+        const { userId } = _req.body;
+        const { _id, name } = _req.user
+        if (!userId) {
+            return _res.status(400).json({ error: 'User ID is required' });
+        }
 
-module.exports = { createUser, loginUser, updateUser, logoutUser } 
+        const { error: customError, value } = userUpdateSchema.validate(_req.body, {
+            abortEarly: false,
+            presence: 'optional',
+        });
+
+        if (customError) {
+            return _res
+                .status(400)
+                .json(error(400, customError.details.map((err) => err.message)[0]));
+        }
+
+        const user = await UserModal.findById(userId);
+        if (!user) {
+            return _res.status(404).json(error(400, 'User not found'));
+        }
+
+        // Check for duplicates on fields that can conflict
+        let duplicateUser = null;
+
+        if (value.email || value.mobile || value.whatsapp) {
+            duplicateUser = await UserModal.findOne({
+                _id: { $ne: userId },
+                $or: [
+                    value.email ? { email: value.email } : null,
+                    value.mobile ? { mobile: value.mobile } : null,
+                    value.whatsapp ? { whatsapp: value.whatsapp } : null
+                ].filter(Boolean)
+            });
+        }
+
+        if (duplicateUser) {
+            return _res.status(409).json({
+                error: 'Another user exists with this email, mobile, or WhatsApp number',
+            });
+        }
+
+        // Hash password if updating
+        if (value.password) {
+            value.password = await hashPassword(value.password);
+        }
+
+        // Update only provided fields
+        Object.keys(value).forEach((key) => {
+            user[key] = value[key];
+        });
+
+        // Set updatedBy
+        user.updatedBy = {
+            _id,
+            name
+        };
+
+        const updatedUser = await user.save();
+        const { password, access_token, createdAt, updatedAt, ...rest } = updatedUser.toObject();
+
+        return _res.status(200).json({
+            message: 'User updated successfully',
+            user: rest
+        });
+    } catch (err) {
+        console.error('Update User Error:', err);
+        return _res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+
+module.exports = { createUser, loginUser, updateUser, logoutUser, getUser } 

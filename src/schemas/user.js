@@ -67,6 +67,17 @@ const userSchema = new mongoose.Schema({
             required: false,
         }
     },
+    updatedBy: {
+        _id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'users', // reference to User model
+            required: false,
+        },
+        name: {
+            type: String,
+            required: false,
+        }
+    },
     password: {
         type: String,
     },
