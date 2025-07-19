@@ -47,7 +47,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: "vendor"
     },
-    token: {
+    access_token: {
         type: String,
         default: ""
     },
@@ -56,21 +56,23 @@ const userSchema = new mongoose.Schema({
         default: true,
         index: true,
     },
+    createdBy: {
+        _id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'users', // reference to User model
+            required: false,
+        },
+        name: {
+            type: String,
+            required: false,
+        }
+    },
     password: {
         type: String,
-        validate: {
-            validator: function (value) {
-                if (this.type !== "customer") {
-                    return typeof value === "string" && value.trim().length > 0;
-                }
-                return true;
-            },
-            message: "Password is required for non-customer users"
-        }
     },
 },
     {
-        timestamps: true // Automatically adds createdAt and updatedAt
+        timestamps: true
     });
 
 const UserModal = mongoose.model('users', userSchema);
