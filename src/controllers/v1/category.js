@@ -1,12 +1,17 @@
 const { error, success } = require("../../functions/functions");
 const { imagePath } = require("../../functions/imagePath");
 const { CategoryModal } = require("../../schemas/categories");
+const { createCategorySchema } = require("../../Validation/category");
 
 const createCategory = async (_req, _res) => {
     try {
-        const userId = _req.user
+        const { _id, name: createdBy } = _req.user
         const folder = _req.body.folder || 'default';
         const media = _req.file ? _req.file.filename : "";
+        const { error: newError, value } = createCategorySchema.validate(_req.body);
+        if (newError) {
+            return _res.status(400).json(error(400, newError.details[0].message));
+        }
         const src = imagePath(folder, media)
         const {
             name,
@@ -15,25 +20,23 @@ const createCategory = async (_req, _res) => {
             featured,
             status,
         } = _req.body;
-
-        if (!name) {
-            return _res.status(400).json(error(400, "Category name is required."));
-        }
         let category = new CategoryModal({
             name,
             picture: src,
             description,
             featured,
             status,
-            user: userId,
-            createdBy: userId
+            user: _id,
+            createdBy: {
+                _id,
+                name: createdBy
+            }
         });
         if (parent) {
             category.parent = parent
         }
         const savedCategory = await category.save();
         return _res.status(201).json(success(savedCategory));
-
     } catch (error) {
         console.error("Error creating category:", error);
         return _res.status(500).json(error(500, error.message));

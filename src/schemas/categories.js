@@ -42,9 +42,15 @@ const CategorySchema = new mongoose.Schema({
         default: null
     },
     createdBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "users",
-        default: null
+        _id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'users', // reference to User model
+            required: false,
+        },
+        name: {
+            type: String,
+            required: false,
+        }
     },
 },
     {
