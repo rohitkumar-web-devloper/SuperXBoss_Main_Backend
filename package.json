@@ -1,0 +1,32 @@
+{
+  "name": "superxboss_main_backend",
+  "version": "1.0.0",
+  "main": "src/server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "cross-env node NODE_ENV=production &&  src/server.js",
+    "dev": "cross-env nodemon NODE_ENV=development && src/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rohitkumar-web-devloper/SuperXBoss_Main_Backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rohitkumar-web-devloper/SuperXBoss_Main_Backend/issues"
+  },
+  "homepage": "https://github.com/rohitkumar-web-devloper/SuperXBoss_Main_Backend#readme",
+  "description": "",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "cross-env": "^7.0.3",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.16.4",
+    "nodemon": "^3.1.10"
+  }
+}
