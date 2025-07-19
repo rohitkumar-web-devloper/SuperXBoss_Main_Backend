@@ -5,15 +5,15 @@ const { requestLogger, addTimeStamp } = require("./middleware/customMiddleware")
 const { globalErrorhandler } = require("./middleware/error-handler")
 const { dbConnect } = require("./config/dbConnect")
 const { createBaseRateLimit } = require("./middleware/rate-limit")
+const { router } = require("./routes/index.route")
 const app = express()
 const PORT = process.env.PORT
 app.use(requestLogger)
 app.use(createBaseRateLimit(1 * 60 * 1000, 100))
 app.use(addTimeStamp)
 app.use(express.json())
-// app.use(categoryRoute)
 //  Add routes
-
+app.use('/api', router);
 app.use(globalErrorhandler)
 app.listen(PORT, () => {
     console.log(`Event service listening on http://localhost:${PORT}`);
