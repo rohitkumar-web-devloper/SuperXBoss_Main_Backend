@@ -1,11 +1,11 @@
 const mongoose = require('mongoose');
 
-const userSchema = new mongoose.Schema({
+const CategorySchema = new mongoose.Schema({
     name: {
         type: String,
         required: true
     },
-    profile: {
+    photo: {
         type: String,
         default: ""
     },
@@ -73,5 +73,5 @@ const userSchema = new mongoose.Schema({
         timestamps: true // Automatically adds createdAt and updatedAt
     });
 
-const UserModal = mongoose.model('users', userSchema);
-module.exports = { UserModal }
+const CategoryModal = mongoose.model('categories', CategorySchema);
+module.exports = { CategoryModal }
