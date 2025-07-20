@@ -5,6 +5,8 @@ const { hashPassword, comparePassword, generateToken } = require("../../Helper")
 const { imagePath } = require("../../functions/imagePath");
 const { imageUpload } = require("../../functions/imageUpload");
 const unlinkOldFile = require("../../functions/unlinkFile");
+const { default: mongoose } = require("mongoose");
+
 const loginUser = async (_req, _res) => {
     try {
         const { error: customError, value } = userLoginSchema.validate(_req.body);
@@ -103,7 +105,6 @@ const createUser = async (_req, _res) => {
     }
 };
 
-
 const updateUser = async (_req, _res) => {
     try {
         const { userId } = _req.body;
@@ -185,42 +186,93 @@ const updateUser = async (_req, _res) => {
 };
 
 const getUser = async (_req, _res) => {
-    try {
-        const { _id } = _req.user;
+  try {
+    const { _id } = _req.user;
+    const page = parseInt(_req.query.page) || 1;
+    const limit = parseInt(_req.query.page_size) || 15;
+    const skip = (page - 1) * limit;
+    const search = _req.query.search || "";
 
-        const page = parseInt(_req.query.page) || 1;
-        const limit = parseInt(_req.query.page_size) || 15;
-        const skip = (page - 1) * limit;
-        const search = _req.query.search || "";
+    const matchQuery = {
+      _id: { $ne: new mongoose.Types.ObjectId(_id) },
+      $or: [
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
+      ],
+    };
 
-        // Search  (by name or email)
-        const searchFilter = {
-            _id: { $ne: _id },
-            $or: [
-                { name: { $regex: search, $options: "i" } },
-                { email: { $regex: search, $options: "i" } },
-            ],
-        };
+    const users = await UserModal.aggregate([
+      { $match: matchQuery },
 
+      // Lookup createdBy
+      {
+        $lookup: {
+          from: "users",
+          localField: "createdBy",
+          foreignField: "_id",
+          as: "createdBy",
+        },
+      },
+      { $unwind: { path: "$createdBy", preserveNullAndEmptyArrays: true } },
 
-        const users = await UserModal.find(searchFilter)
-            .skip(skip)
-            .limit(limit)
-            .sort({ createdAt: -1 });
+      // Lookup updatedBy
+      {
+        $lookup: {
+          from: "users",
+          localField: "updatedBy",
+          foreignField: "_id",
+          as: "updatedBy",
+        },
+      },
+      { $unwind: { path: "$updatedBy", preserveNullAndEmptyArrays: true } },
 
-        const total = await UserModal.countDocuments(searchFilter);
+      // Project all fields, but restrict fields from createdBy and updatedBy
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          email: 1,
+          mobile: 1,
+          role: 1,
+          status: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          // All other top-level fields
+          createdBy: {
+            _id: "$createdBy._id",
+            name: "$createdBy.name",
+            email: "$createdBy.email",
+          },
+          updatedBy: {
+            _id: "$updatedBy._id",
+            name: "$updatedBy.name",
+            email: "$updatedBy.email",
+          },
+        },
+      },
 
-        return _res.status(200).json(success({
-            users,
-            total,
-            page,
-            totalPages: Math.ceil(total / limit),
-        }, "Users fetched successfully"));
+      { $sort: { createdAt: -1 } },
+      { $skip: skip },
+      { $limit: limit },
+    ]);
 
-    } catch (err) {
-        console.error("Error in getUser:", err);
-        return _res.status(500).json(error(500, "Internal server error"));
-    }
+    const total = await UserModal.countDocuments(matchQuery);
+
+    return _res.status(200).json(
+      success(
+        {
+          users,
+          total,
+          page,
+          totalPages: Math.ceil(total / limit),
+        },
+        "Users fetched successfully"
+      )
+    );
+  } catch (err) {
+    console.error("Error in getUser:", err);
+    return _res.status(500).json(error(500, "Internal server error"));
+  }
 };
 
 

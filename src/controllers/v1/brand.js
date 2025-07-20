@@ -142,7 +142,6 @@ const getBrands = async (_req, res) => {
             },
             {
                 $project: {
-
                     "createdBy.access_token": 0,
                     "createdBy.password": 0,
                     "createdBy.createdAt": 0,
