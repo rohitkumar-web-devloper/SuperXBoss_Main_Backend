@@ -6,7 +6,7 @@ const { upload } = require("../../middleware/upload");
 
 // Assuming userController.login is a function
 categoryRouter.post('/category', upload.single("picture"), asyncHandler(createCategory));
-categoryRouter.put('/category', upload.single("picture"), asyncHandler(updateCategory));
+categoryRouter.put('/category/:id', upload.single("picture"), asyncHandler(updateCategory));
 categoryRouter.get('/category', asyncHandler(getCategories));
 
 

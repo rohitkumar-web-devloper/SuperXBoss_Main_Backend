@@ -3,7 +3,7 @@ const cors = require("cors")
 const configureCors = () => {
     return cors({
         origin: (origin, callback) => {
-            const allowOrgin = ["https://localhost:3000"]
+            const allowOrgin = ["https://localhost:3000", "http://localhost:5173"]
             if (!origin || allowOrgin.includes(origin)) {
                 callback(null, true)
             } else {
@@ -24,4 +24,4 @@ const configureCors = () => {
     })
 }
 
-module.exports={configureCors}
+module.exports = { configureCors }

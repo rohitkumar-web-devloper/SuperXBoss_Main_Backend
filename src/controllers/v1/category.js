@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const { error, success } = require("../../functions/functions");
 const { imagePath } = require("../../functions/imagePath");
 const { imageUpload } = require("../../functions/imageUpload");
@@ -19,6 +20,7 @@ const createCategory = async (_req, _res) => {
             parent,
             featured,
             status,
+
         } = _req.body;
         const check = await CategoryModal.findOne({ name })
         if (check) {
@@ -47,7 +49,7 @@ const createCategory = async (_req, _res) => {
 }
 const updateCategory = async (_req, _res) => {
     try {
-        const { id } = _req.query;
+        const { id } = _req.params;
         const { _id: userId } = _req.user;
         const { originalname, buffer } = _req?.file || {};
 
@@ -102,14 +104,23 @@ const updateCategory = async (_req, _res) => {
 };
 const getCategories = async (_req, _res) => {
     try {
+        const { parent } = _req.query
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
         const search = _req.query.search || "";
+        const matchStage = {};
 
-        const matchStage = search
-            ? { name: { $regex: search, $options: "i" } }
-            : {};
+        if (search) {
+            matchStage.name = { $regex: search, $options: "i" };
+        }
+
+        if (parent) {
+            matchStage.parent = new mongoose.Types.ObjectId(parent);
+        } else {
+            matchStage.parent = null
+
+        }
 
         const aggregationPipeline = [
             { $match: matchStage },
