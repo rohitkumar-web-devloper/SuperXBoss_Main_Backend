@@ -59,12 +59,12 @@ const userSchema = new mongoose.Schema({
     },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref:'users'
+        required: false,
+        ref: 'users'
     },
     updatedBy: {
         type: mongoose.Schema.Types.ObjectId,
-        ref:'users'
+        ref: 'users'
     },
     password: {
         type: String,
