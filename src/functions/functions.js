@@ -1,9 +1,10 @@
 
-function success(data, message) {
+function success(data, message, pagination) {
     return {
         _payload: data,
         type: "success",
-        message
+        message,
+        pagination: pagination || undefined
     };
 }
 
@@ -23,4 +24,4 @@ function info(message, data = null) {
     };
 }
 
-module.exports = { info, error, success}
+module.exports = { info, error, success }

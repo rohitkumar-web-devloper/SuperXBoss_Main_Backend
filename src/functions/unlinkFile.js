@@ -8,6 +8,8 @@ const unlinkOldFile = (fileUrl) => {
         const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 4004}`;
         const relativePath = fileUrl.replace(baseUrl, ''); // e.g., /uploads/user/filename.png
         const fullPath = path.join(__dirname, '../../', relativePath); // Adjust based on folder structure
+        console.log(fullPath, "fullPath");
+
 
         if (fs.existsSync(fullPath)) {
             fs.unlinkSync(fullPath);

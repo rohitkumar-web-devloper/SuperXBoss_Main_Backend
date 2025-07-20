@@ -1,18 +1,18 @@
 const { error, success } = require("../../functions/functions");
 const { imagePath } = require("../../functions/imagePath");
+const { imageUpload } = require("../../functions/imageUpload");
+const unlinkOldFile = require("../../functions/unlinkFile");
 const { CategoryModal } = require("../../schemas/categories");
-const { createCategorySchema } = require("../../Validation/category");
+const { createCategorySchema, updateCategorySchema } = require("../../Validation/category");
 
 const createCategory = async (_req, _res) => {
     try {
-        const { _id, name: createdBy } = _req.user
-        const folder = _req.body.folder || 'default';
-        const media = _req.file ? _req.file.filename : "";
+        const { _id } = _req.user
+        const { originalname, buffer } = _req?.file || {};
         const { error: newError } = createCategorySchema.validate(_req.body);
         if (newError) {
             return _res.status(400).json(error(400, newError.details[0].message));
         }
-        const src = imagePath(folder, media)
         const {
             name,
             description,
@@ -20,18 +20,21 @@ const createCategory = async (_req, _res) => {
             featured,
             status,
         } = _req.body;
+        const check = await CategoryModal.findOne({ name })
+        if (check) {
+            return _res.status(400).json(error(400, `${name} category already exist. `));
+        }
         let category = new CategoryModal({
             name,
-            picture: src,
             description,
             featured,
             status,
             user: _id,
-            createdBy: {
-                _id,
-                name: createdBy
-            }
+            createdBy: _id
         });
+        if (originalname && buffer) {
+            category.picture = await imageUpload(originalname, buffer, 'category')
+        }
         if (parent) {
             category.parent = parent
         }
@@ -42,5 +45,160 @@ const createCategory = async (_req, _res) => {
         return _res.status(500).json(error(500, error.message));
     }
 }
+const updateCategory = async (_req, _res) => {
+    try {
+        const { id } = _req.query;
+        const { _id: userId } = _req.user;
+        const { originalname, buffer } = _req?.file || {};
 
-module.exports = { createCategory } 
+        // Validate request body
+        const { error: validationError } = updateCategorySchema.validate(_req.body);
+        if (validationError) {
+            return _res.status(400).json(error(400, validationError.details[0].message));
+        }
+
+        const {
+            name,
+            description,
+            parent,
+            featured,
+            status
+        } = _req.body;
+        // Check if category exists
+        const existingCategory = await CategoryModal.findById(id);
+        if (!existingCategory) {
+            return _res.status(404).json(error(404, "Category not found."));
+        }
+
+        // Check for duplicate name (excluding self)
+        const duplicate = await CategoryModal.findOne({ name, _id: { $ne: id } });
+        if (duplicate) {
+            return _res.status(400).json(error(400, `${name} category already exists.`));
+        }
+
+        // Update fields
+        existingCategory.name = name;
+        existingCategory.description = description;
+        existingCategory.featured = featured;
+        existingCategory.status = status;
+        existingCategory.updatedBy = userId;
+        if (parent) {
+            existingCategory.parent = parent;
+        }
+        if (originalname && buffer) {
+            if (_req.file) {
+                unlinkOldFile(existingCategory.picture)
+            }
+            existingCategory.picture = await imageUpload(originalname, buffer, 'category');
+        }
+
+        const updatedCategory = await existingCategory.save();
+
+        return _res.status(200).json(success(updatedCategory));
+    } catch (err) {
+        console.error("Error updating category:", err);
+        return _res.status(500).json(error(500, err.message));
+    }
+};
+const getCategories = async (_req, _res) => {
+    try {
+        const page = parseInt(_req.query.page) || 1;
+        const limit = parseInt(_req.query.page_size) || 15;
+        const skip = (page - 1) * limit;
+        const search = _req.query.search || "";
+
+        const matchStage = search
+            ? { name: { $regex: search, $options: "i" } }
+            : {};
+
+        const aggregationPipeline = [
+            { $match: matchStage },
+
+            // Lookup createdBy details
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "createdBy",
+                    foreignField: "_id",
+                    as: "createdBy"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$createdBy",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+
+            // Lookup updatedBy details
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "updatedBy",
+                    foreignField: "_id",
+                    as: "updatedBy"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$updatedBy",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $project: {
+
+                    "createdBy.access_token": 0,
+                    "createdBy.password": 0,
+                    "createdBy.createdAt": 0,
+                    "createdBy.updatedAt": 0,
+                    "createdBy.role": 0,
+                    "createdBy.type": 0,
+                    "createdBy.status": 0,
+                    "updatedBy.access_token": 0,
+                    "updatedBy.password": 0,
+                    "updatedBy.createdAt": 0,
+                    "updatedBy.updatedAt": 0,
+                    "updatedBy.role": 0,
+                    "updatedBy.type": 0,
+                    "updatedBy.status": 0,
+
+                }
+            },
+            // Sorting and pagination
+            { $sort: { sorting: 1 } },
+            {
+                $facet: {
+                    data: [
+                        { $skip: skip },
+                        { $limit: limit },
+                    ],
+                    totalCount: [
+                        { $count: "count" }
+                    ]
+                }
+            }
+        ];
+
+        const result = await CategoryModal.aggregate(aggregationPipeline);
+
+        const category = result[0].data;
+        const total = result[0].totalCount[0]?.count || 0;
+
+        return _res.status(200).json(success(
+            category, "Success",
+            {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            }));
+
+
+    } catch (error) {
+        return _req.status(500).json({ success: false, message: error.message });
+    }
+};
+
+
+module.exports = { createCategory, updateCategory, getCategories } 

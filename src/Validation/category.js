@@ -38,6 +38,7 @@ const createCategorySchema = Joi.object({
 }).unknown(false);
 
 const updateCategorySchema = Joi.object({
+    _id: Joi.string().custom(objectId), // Optional _id field
     name: Joi.string().trim().min(1).max(nameMax),
     picture: Joi.string().uri({ allowRelative: true }).allow('', null),
     parent: Joi.alternatives().try(Joi.string().custom(objectId), Joi.valid(null)),

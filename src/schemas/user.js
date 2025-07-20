@@ -64,7 +64,7 @@ const userSchema = new mongoose.Schema({
     },
     updatedBy: {
         type: mongoose.Schema.Types.ObjectId,
-        ref:'users'
+        ref: 'users'
     },
     password: {
         type: String,
