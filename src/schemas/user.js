@@ -59,8 +59,13 @@ const userSchema = new mongoose.Schema({
     },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
+<<<<<<< HEAD
         required: true,
         ref: 'users'
+=======
+        required: false,
+        ref:'users'
+>>>>>>> rohit
     },
     updatedBy: {
         type: mongoose.Schema.Types.ObjectId,

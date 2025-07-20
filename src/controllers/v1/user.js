@@ -2,7 +2,6 @@ const { error, success } = require("../../functions/functions");
 const { userValidationSchema, userLoginSchema, userUpdateSchema } = require("../../Validation/user");
 const { UserModal } = require('../../schemas/user');
 const { hashPassword, comparePassword, generateToken } = require("../../Helper");
-const { imagePath } = require("../../functions/imagePath");
 const { imageUpload } = require("../../functions/imageUpload");
 const unlinkOldFile = require("../../functions/unlinkFile");
 const { default: mongoose } = require("mongoose");
@@ -259,14 +258,14 @@ const getUser = async (_req, _res) => {
     const total = await UserModal.countDocuments(matchQuery);
 
     return _res.status(200).json(
-      success(
+      success(   users, "Users fetched successfully" ,
         {
-          users,
           total,
           page,
+          limit,
           totalPages: Math.ceil(total / limit),
         },
-        "Users fetched successfully"
+       
       )
     );
   } catch (err) {

@@ -1,16 +1,13 @@
-const { dbConnect } = require('../config/dbConnect');
-const { hashPassword } = require('../Helper/index')
-const { UserModal } = require('../schemas/user')
-const pathName = `.env.${process.env.NODE_ENV || 'development'}`;
-require("dotenv").config({ path: pathName });
+const { hashPassword } = require('../Helper/index');
+const { UserModal } = require('../schemas/user');
+
 async function runSeeder() {
     try {
-        dbConnect()
-        // Check if user already exists
         const existingUser = await UserModal.findOne({ email: 'admin@example.com' });
+
         if (existingUser) {
-            console.log('Admin user already exists. Skipping...');
-            return process.exit(0);
+            console.log('⚠️ Admin user already exists. Skipping...');
+            return;
         }
 
         const hashedPassword = await hashPassword('admin123');
@@ -24,16 +21,15 @@ async function runSeeder() {
             email: 'admin@example.com',
             password: hashedPassword,
             role: 'admin',
-            type: 'vendor'
+            type: 'vendor',
         });
 
         await newUser.save();
-        console.log('Admin user created successfully');
-        process.exit(0);
+        console.log('✅ Admin user created successfully.');
     } catch (err) {
-        console.error('Seeder error:', err);
-        process.exit(1);
+        console.error('❌ Seeder error (userSeeder):', err);
+        throw err; // let the main script handle it
     }
 }
 
-runSeeder();
+module.exports = runSeeder;

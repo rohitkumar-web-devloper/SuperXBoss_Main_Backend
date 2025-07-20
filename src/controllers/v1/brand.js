@@ -179,16 +179,17 @@ const getBrands = async (_req, res) => {
         const brands = result[0].data;
         const total = result[0].totalCount[0]?.count || 0;
 
-        return res.status(200).json({
-            success: true,
-            data: brands,
-            pagination: {
-                total,
-                page,
-                limit,
-                totalPages: Math.ceil(total / limit),
-            },
-        });
+        return res.status(200).json(
+            success(brands, "Brands fetched successfully",
+                {
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit),
+                },
+
+            )
+        );
 
     } catch (error) {
         return _req.status(500).json({ success: false, message: error.message });
