@@ -59,13 +59,8 @@ const userSchema = new mongoose.Schema({
     },
     createdBy: {
         type: mongoose.Schema.Types.ObjectId,
-<<<<<<< HEAD
-        required: true,
-        ref: 'users'
-=======
         required: false,
-        ref:'users'
->>>>>>> rohit
+        ref: 'users'
     },
     updatedBy: {
         type: mongoose.Schema.Types.ObjectId,
