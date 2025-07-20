@@ -2,6 +2,7 @@ const { error, success } = require("../../functions/functions");
 const { userValidationSchema, userLoginSchema, userUpdateSchema } = require("../../Validation/user");
 const { UserModal } = require('../../schemas/user');
 const { hashPassword, comparePassword, generateToken } = require("../../Helper");
+const { imagePath } = require("../../functions/imagePath");
 const loginUser = async (_req, _res) => {
     try {
         const { error: customError, value } = userLoginSchema.validate(_req.body);
@@ -63,7 +64,8 @@ const logoutUser = async (_req, _res) => {
 const createUser = async (_req, _res) => {
     try {
         const { _id, name } = _req.user
-        console.log(_req.user);
+        const folder = _req.body.folder || 'user';
+        const media = _req.file ? _req.file.filename : "";
 
         const { error: customError, value } = userValidationSchema.validate(_req.body, { abortEarly: false });
 
@@ -83,18 +85,20 @@ const createUser = async (_req, _res) => {
             return _res.status(409).json({ error: 'User already exists with this email or mobile or whatsapp number' });
         }
         const haspassword = await hashPassword(value.password)
+        let src = '';
+        if(media){
+             src = imagePath(folder, media)
+        }
         const newUser = new UserModal({
-            ...value, password: haspassword, createdBy: {
+            ...value, password: haspassword, profile: src,
+            createdBy: {
                 _id,
                 name
             }
         });
         const savedUser = await newUser.save();
         const { createdAt, updatedAt, access_token, password, ...rest } = savedUser.toObject()
-        return _res.status(201).json({
-            message: 'User created successfully',
-            user: rest
-        });
+        return _res.status(201).json(success(rest , "User created successfully"));
     } catch (err) {
         return _res.status(500).json(error(500, "Internal server errror"));
     }
@@ -118,6 +122,8 @@ const updateUser = async (_req, _res) => {
     try {
         const { userId } = _req.body;
         const { _id, name } = _req.user
+        const folder = _req.body.folder || 'default';
+        const media = _req.file ? _req.file.filename : "";
         if (!userId) {
             return _res.status(400).json({ error: 'User ID is required' });
         }
@@ -167,6 +173,11 @@ const updateUser = async (_req, _res) => {
         Object.keys(value).forEach((key) => {
             user[key] = value[key];
         });
+
+        // profile update
+        if (media) {
+            user.profile = imagePath(folder, media)
+        }
 
         // Set updatedBy
         user.updatedBy = {

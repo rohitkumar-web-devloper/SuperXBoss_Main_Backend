@@ -8,7 +8,7 @@ const createCategory = async (_req, _res) => {
         const { _id, name: createdBy } = _req.user
         const folder = _req.body.folder || 'default';
         const media = _req.file ? _req.file.filename : "";
-        const { error: newError, value } = createCategorySchema.validate(_req.body);
+        const { error: newError } = createCategorySchema.validate(_req.body);
         if (newError) {
             return _res.status(400).json(error(400, newError.details[0].message));
         }

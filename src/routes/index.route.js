@@ -1,4 +1,5 @@
 const { authenticateUser } = require('../middleware/authenticateUser');
+const brandRouter = require('./admin/brand.route');
 const categoryRouter = require('./admin/category.route');
 const userRouter = require('./admin/user.route')
 
@@ -9,6 +10,7 @@ const router = express.Router();
 /* Routes */
 router.use("/", userRouter);
 router.use("/", authenticateUser, categoryRouter);
+router.use("/brand", authenticateUser, brandRouter);
 
 /* Export the router */
 module.exports = { router }
