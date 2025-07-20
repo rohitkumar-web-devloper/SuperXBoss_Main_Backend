@@ -9,7 +9,8 @@ const { dbConnect } = require("./config/dbConnect");
 const { createBaseRateLimit } = require("./middleware/rate-limit");
 const { router } = require("./routes/index.route");
 const { configureCors } = require("./config/corsConfig");
-const { baseUploadPath } = require("./middleware/upload");
+const { baseUploadPath } = require("./functions/imageUpload");
+// const { baseUploadPath } = require("./middleware/upload");
 
 const app = express();
 const PORT = process.env.PORT || 4004; // Fallback in case env is missing

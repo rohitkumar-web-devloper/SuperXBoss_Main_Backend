@@ -45,7 +45,7 @@ const userValidationSchema = Joi.object({
 
     access_token: Joi.string().optional().allow(''),
 
-    status: Joi.boolean().default(true),
+    status: Joi.boolean().default(false),
 
     password: Joi.when('type', {
         is: Joi.not('customer'),

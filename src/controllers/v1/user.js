@@ -3,6 +3,8 @@ const { userValidationSchema, userLoginSchema, userUpdateSchema } = require("../
 const { UserModal } = require('../../schemas/user');
 const { hashPassword, comparePassword, generateToken } = require("../../Helper");
 const { imagePath } = require("../../functions/imagePath");
+const { imageUpload } = require("../../functions/imageUpload");
+const unlinkOldFile = require("../../functions/unlinkFile");
 const loginUser = async (_req, _res) => {
     try {
         const { error: customError, value } = userLoginSchema.validate(_req.body);
@@ -63,10 +65,8 @@ const logoutUser = async (_req, _res) => {
 
 const createUser = async (_req, _res) => {
     try {
-        const { _id, name } = _req.user
-        const folder = _req.body.folder || 'user';
-        const media = _req.file ? _req.file.filename : "";
-
+        const { _id } = _req.user
+        const { originalname, buffer } = _req.file || {};
         const { error: customError, value } = userValidationSchema.validate(_req.body, { abortEarly: false });
 
         if (customError) {
@@ -85,45 +85,30 @@ const createUser = async (_req, _res) => {
             return _res.status(409).json({ error: 'User already exists with this email or mobile or whatsapp number' });
         }
         const haspassword = await hashPassword(value.password)
-        let src = '';
-        if(media){
-             src = imagePath(folder, media)
+        let file = '';
+        if (originalname && buffer) {
+            file = await imageUpload(originalname, buffer, "user")
         }
         const newUser = new UserModal({
-            ...value, password: haspassword, profile: src,
-            createdBy: {
-                _id,
-                name
-            }
+            ...value, password: haspassword, profile: file,
+            createdBy: _id
         });
         const savedUser = await newUser.save();
         const { createdAt, updatedAt, access_token, password, ...rest } = savedUser.toObject()
-        return _res.status(201).json(success(rest , "User created successfully"));
+        return _res.status(201).json(success(rest, "User created successfully"));
     } catch (err) {
+        console.log(err.message);
+
         return _res.status(500).json(error(500, "Internal server errror"));
     }
 };
 
-
-const getUser = async (_req, _res) => {
-    try {
-        const { _id } = _req.user;
-
-        const users = await UserModal.find({ _id: { $ne: _id } });
-
-        return _res.status(200).json(success(users, "User fetch successfully"));
-
-    } catch (err) {
-        return _res.status(500).json(error(500, "Internal server errror"));
-    }
-};
 
 const updateUser = async (_req, _res) => {
     try {
         const { userId } = _req.body;
-        const { _id, name } = _req.user
-        const folder = _req.body.folder || 'default';
-        const media = _req.file ? _req.file.filename : "";
+        const { _id } = _req.user
+        const { originalname, buffer } = _req?.file || {};
         if (!userId) {
             return _res.status(400).json({ error: 'User ID is required' });
         }
@@ -175,15 +160,16 @@ const updateUser = async (_req, _res) => {
         });
 
         // profile update
-        if (media) {
-            user.profile = imagePath(folder, media)
+
+        if (originalname && buffer) {
+            if (_req.file) {
+                unlinkOldFile(user.profile)
+            }
+            user.profile = await imageUpload(originalname, buffer, 'user')
         }
 
         // Set updatedBy
-        user.updatedBy = {
-            _id,
-            name
-        };
+        user.updatedBy = _id
 
         const updatedUser = await user.save();
         const { password, access_token, createdAt, updatedAt, ...rest } = updatedUser.toObject();
@@ -195,6 +181,45 @@ const updateUser = async (_req, _res) => {
     } catch (err) {
         console.error('Update User Error:', err);
         return _res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+const getUser = async (_req, _res) => {
+    try {
+        const { _id } = _req.user;
+
+        const page = parseInt(_req.query.page) || 1;
+        const limit = parseInt(_req.query.page_size) || 15;
+        const skip = (page - 1) * limit;
+        const search = _req.query.search || "";
+
+        // Search  (by name or email)
+        const searchFilter = {
+            _id: { $ne: _id },
+            $or: [
+                { name: { $regex: search, $options: "i" } },
+                { email: { $regex: search, $options: "i" } },
+            ],
+        };
+
+
+        const users = await UserModal.find(searchFilter)
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 });
+
+        const total = await UserModal.countDocuments(searchFilter);
+
+        return _res.status(200).json(success({
+            users,
+            total,
+            page,
+            totalPages: Math.ceil(total / limit),
+        }, "Users fetched successfully"));
+
+    } catch (err) {
+        console.error("Error in getUser:", err);
+        return _res.status(500).json(error(500, "Internal server error"));
     }
 };
 

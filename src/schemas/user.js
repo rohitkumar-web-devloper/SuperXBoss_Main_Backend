@@ -1,3 +1,4 @@
+const { required } = require('joi');
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
@@ -57,26 +58,13 @@ const userSchema = new mongoose.Schema({
         index: true,
     },
     createdBy: {
-        _id: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'users', // reference to User model
-            required: false,
-        },
-        name: {
-            type: String,
-            required: false,
-        }
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref:'users'
     },
     updatedBy: {
-        _id: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'users', // reference to User model
-            required: false,
-        },
-        name: {
-            type: String,
-            required: false,
-        }
+        type: mongoose.Schema.Types.ObjectId,
+        ref:'users'
     },
     password: {
         type: String,

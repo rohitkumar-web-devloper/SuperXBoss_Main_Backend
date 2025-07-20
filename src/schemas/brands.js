@@ -39,29 +39,14 @@ const brandSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-
     createdBy: {
-      _id: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: true,
-        ref: 'users',
-      },
-      name: {
-        type: String,
-        required: true,
-      },
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref:'users'
     },
-
     updatedBy: {
-      _id: {
-        type: mongoose.Schema.Types.ObjectId,
-        required: false,
-        ref: 'users',
-      },
-      name: {
-        type: String,
-        required: false,
-      },
+      type: mongoose.Schema.Types.ObjectId,
+      ref:'users'
     },
   },
   {

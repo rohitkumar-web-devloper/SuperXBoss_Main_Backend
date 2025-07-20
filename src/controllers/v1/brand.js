@@ -2,36 +2,42 @@ const { error, success } = require("../../functions/functions");
 const { BrandModel } = require("../../schemas/brands");
 const { brandSchema, updateBrandSchema } = require("../../Validation/brand");
 const { imagePath } = require("../../functions/imagePath");
+const { imageUpload } = require("../../functions/imageUpload");
+
 const createBrand = async (_req, _res) => {
     try {
-        const { _id, name } = _req.user
-        const folder = _req.body?.folder || 'brand';
-        const media = _req.file ? _req.file.filename : "";
+        const { _id, name: userName } = _req.user;
+        const { originalname, buffer } = _req.file;
 
-        const { error: customError, value } = brandSchema.validate({ ..._req.body, logo: _req.file }, { abortEarly: false })
+        const { error: customError, value } = brandSchema.validate(
+            { ..._req.body, logo: _req.file },
+            { abortEarly: false }
+        );
         if (customError) {
             return _res.status(400).json(error(400, customError.details.map(err => err.message)[0]));
         }
-        // Check if brand already exists with same name (case-insensitive)
-        const existing = await BrandModel.findOne({ name: { $regex: `^${name}$`, $options: 'i' } });
+
+        const existing = await BrandModel.findOne({
+            name: { $regex: `^${value.name}$`, $options: 'i' }
+        });
         if (existing) {
             return _res.status(409).json(error(400, 'Brand with this name already exists'));
         }
 
-        let src = '';
-        if (media) {
-            src = imagePath(folder, media)
+        let file = '';
+        if (buffer && originalname) {
+            file = await imageUpload(originalname, buffer, "brand");
         }
 
         const brand = new BrandModel({
-            ...value, logo: src,
-            createdBy: {
-                _id,
-                name
-            }
+            ...value,
+            logo: file,
+            createdBy: _id
         });
+
         const savebrand = await brand.save();
-        const { createdAt, updatedAt, ...rest } = savebrand.toObject()
+        const { createdAt, updatedAt, ...rest } = savebrand.toObject();
+
         return _res.status(201).json(success(rest, 'Brand created successfully'));
     } catch (err) {
         return _res.status(500).json(error(500, err.message));
@@ -41,46 +47,42 @@ const createBrand = async (_req, _res) => {
 
 const updateBrand = async (_req, _res) => {
     try {
-        const { _id, name: updatedByName } = _req.user;
-        const { brandId } = _req.body; 
-        const folder = _req.body?.folder || 'brand';
-        const media = _req.file ? _req.file.filename : "";
+        const { _id, } = _req.user;
+        const { brandId } = _req.body;
 
-        // Validate input using brandSchema
         const { error: customError, value } = updateBrandSchema.validate(_req.body, { abortEarly: false });
 
         if (customError) {
             return _res.status(400).json(error(400, customError.details.map(err => err.message)[0]));
         }
 
-        // Check if brand exists
-        const brand = await BrandModel.findById({_id:brandId});
+        //  Find brand
+        const brand = await BrandModel.findById(brandId);
         if (!brand) {
             return _res.status(404).json(error(404, 'Brand not found'));
         }
 
-        // Check for duplicate name (ignore current brand)
+        //  Check for duplicate name (excluding itself)
         const existing = await BrandModel.findOne({
             name: { $regex: `^${value.name}$`, $options: 'i' },
-            _id: { $ne: brandId}
+            _id: { $ne: brandId }
         });
         if (existing) {
             return _res.status(409).json(error(409, 'Another brand with this name already exists'));
         }
 
-        // Build update data
         let updatedLogo = brand.logo;
-        if (media) {
-            updatedLogo = imagePath(folder, media);
+        if (_req.file && _req.file.buffer) {
+            if (brand.logo) {
+                unlinkOldFile(brand.logo);
+            }
+            updatedLogo = await imageUpload(_req.file.originalname, _req.file.buffer, folder);
         }
 
         const updatedData = {
             ...value,
             logo: updatedLogo,
-            updatedBy: {
-                _id,
-                name: updatedByName
-            }
+            updatedBy: _id
         };
 
         const updatedBrand = await BrandModel.findByIdAndUpdate(brandId, updatedData, { new: true });
@@ -88,22 +90,112 @@ const updateBrand = async (_req, _res) => {
         const { createdAt, updatedAt, ...rest } = updatedBrand.toObject();
         return _res.status(200).json(success(rest, 'Brand updated successfully'));
     } catch (err) {
+        console.error('Update Brand Error:', err);
         return _res.status(500).json(error(500, err.message));
     }
 };
 
-
 const getBrands = async (_req, res) => {
     try {
-        const brands = await BrandModel.find().sort({ sorting: 1 });
+        const page = parseInt(_req.query.page) || 1;
+        const limit = parseInt(_req.query.page_size) || 15;
+        const skip = (page - 1) * limit;
+        const search = _req.query.search || "";
+
+        const matchStage = search
+            ? { name: { $regex: search, $options: "i" } }
+            : {};
+
+        const aggregationPipeline = [
+            { $match: matchStage },
+
+            // Lookup createdBy details
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "createdBy",
+                    foreignField: "_id",
+                    as: "createdBy"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$createdBy",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+
+            // Lookup updatedBy details
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "updatedBy",
+                    foreignField: "_id",
+                    as: "updatedBy"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$updatedBy",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $project: {
+
+                    "createdBy.access_token": 0,
+                    "createdBy.password": 0,
+                    "createdBy.createdAt": 0,
+                    "createdBy.updatedAt": 0,
+                    "createdBy.role": 0,
+                    "createdBy.type": 0,
+                    "createdBy.status": 0,
+                    "updatedBy.access_token": 0,
+                    "updatedBy.password": 0,
+                    "updatedBy.createdAt": 0,
+                    "updatedBy.updatedAt": 0,
+                    "updatedBy.role": 0,
+                    "updatedBy.type": 0,
+                    "updatedBy.status": 0,
+
+                }
+            },
+            // Sorting and pagination
+            { $sort: { sorting: 1 } },
+            {
+                $facet: {
+                    data: [
+                        { $skip: skip },
+                        { $limit: limit },
+                    ],
+                    totalCount: [
+                        { $count: "count" }
+                    ]
+                }
+            }
+        ];
+
+        const result = await BrandModel.aggregate(aggregationPipeline);
+
+        const brands = result[0].data;
+        const total = result[0].totalCount[0]?.count || 0;
 
         return res.status(200).json({
             success: true,
             data: brands,
+            pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit),
+            },
         });
+
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
     }
 };
+
+
 
 module.exports = { createBrand, updateBrand, getBrands }
