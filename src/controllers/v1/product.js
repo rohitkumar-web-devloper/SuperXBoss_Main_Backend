@@ -4,7 +4,11 @@ const unlinkOldFile = require("../../functions/unlinkFile");
 const { ProductModel } = require("../../schemas/product");
 const { productJoiSchema } = require("../../Validation/product");
 const createProduct = async (_req, _res) => {
+
     try {
+        if (!_req?.body) {
+            return _res.status(400).json(error(400, "Product Body is required."));
+        }
         const { error: newError, value } = productJoiSchema.validate(_req.body, {
             abortEarly: false,
             stripUnknown: true,
@@ -15,8 +19,8 @@ const createProduct = async (_req, _res) => {
                 .json(
                     error(
                         400,
+                        newError.details?.[0]?.message,
                         'Validation failed',
-                        newError.details?.[0]?.message
                     )
                 );
         }
@@ -39,6 +43,7 @@ const createProduct = async (_req, _res) => {
         }
         const payload = {
             ...value,
+            bulk_discount: JSON.parse(value.bulk_discount),
             images,
             video: video,
             createdBy: _req.user._id,
@@ -55,6 +60,9 @@ const createProduct = async (_req, _res) => {
 
 const updateProduct = async (_req, _res) => {
     try {
+        if (!_req?.body) {
+            return _res.status(400).json(error(400, "Product Body is required."));
+        }
         const { error: newError, value } = productJoiSchema.validate(_req.body, {
             abortEarly: false,
             stripUnknown: true,
@@ -65,8 +73,8 @@ const updateProduct = async (_req, _res) => {
                 .json(
                     error(
                         400,
-                        'Validation failed',
-                        newError.details?.[0]?.message
+                        newError.details?.[0]?.message,
+                        'Validation failed'
                     )
                 );
         }
@@ -119,6 +127,7 @@ const updateProduct = async (_req, _res) => {
 
 const getProducts = async (_req, _res) => {
     try {
+        const { active } = _req.query
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
@@ -126,6 +135,12 @@ const getProducts = async (_req, _res) => {
         const matchStage = {};
         if (search) {
             matchStage.name = { $regex: search, $options: "i" };
+        }
+        if (active == true) {
+            matchStage.status = true
+        }
+        if (active == false) {
+            matchStage.status = false
         }
         const aggregationPipeline = [
             { $match: matchStage },

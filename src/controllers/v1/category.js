@@ -8,6 +8,9 @@ const { createCategorySchema, updateCategorySchema } = require("../../Validation
 
 const createCategory = async (_req, _res) => {
     try {
+        if (!_req?.body) {
+            return _res.status(400).json(error(400, "Category Body is required."));
+        }
         const { _id } = _req.user
         const { originalname, buffer } = _req?.file || {};
         const { error: newError } = createCategorySchema.validate(_req.body);
@@ -20,7 +23,6 @@ const createCategory = async (_req, _res) => {
             parent,
             featured,
             status,
-
         } = _req.body;
         const check = await CategoryModal.findOne({ name })
         if (check) {
@@ -49,6 +51,9 @@ const createCategory = async (_req, _res) => {
 }
 const updateCategory = async (_req, _res) => {
     try {
+        if (!_req?.body) {
+            return _res.status(400).json(error(400, "Category Body is required."));
+        }
         const { id } = _req.params;
         const { _id: userId } = _req.user;
         const { originalname, buffer } = _req?.file || {};
@@ -66,19 +71,15 @@ const updateCategory = async (_req, _res) => {
             featured,
             status
         } = _req.body;
-        // Check if category exists
         const existingCategory = await CategoryModal.findById(id);
         if (!existingCategory) {
             return _res.status(404).json(error(404, "Category not found."));
         }
 
-        // Check for duplicate name (excluding self)
         const duplicate = await CategoryModal.findOne({ name, _id: { $ne: id } });
         if (duplicate) {
             return _res.status(400).json(error(400, `${name} category already exists.`));
         }
-
-        // Update fields
         existingCategory.name = name;
         existingCategory.description = description;
         existingCategory.featured = featured;
@@ -104,7 +105,7 @@ const updateCategory = async (_req, _res) => {
 };
 const getCategories = async (_req, _res) => {
     try {
-        const { parent } = _req.query
+        const { parent, active } = _req.query
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
@@ -114,7 +115,12 @@ const getCategories = async (_req, _res) => {
         if (search) {
             matchStage.name = { $regex: search, $options: "i" };
         }
-
+        if (active == true) {
+            matchStage.status = true
+        }
+        if (active == false) {
+            matchStage.status = false
+        }
         if (parent) {
             matchStage.parent = new mongoose.Types.ObjectId(parent);
         } else {
