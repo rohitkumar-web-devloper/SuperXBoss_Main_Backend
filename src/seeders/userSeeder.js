@@ -23,6 +23,7 @@ async function runSeeder() {
             role: 'admin',
             type: 'vendor',
         });
+        newUser.createdBy = newUser?._id
 
         await newUser.save();
         console.log('✅ Admin user created successfully.');
