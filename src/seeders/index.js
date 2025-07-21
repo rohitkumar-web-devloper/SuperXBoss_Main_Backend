@@ -2,6 +2,8 @@ const runSeeder = require("./userSeeder");
 const seedVehicleSegmentTypes = require("./vehicleSegmentTypeSeeder");
 const { dbConnect } = require('../config/dbConnect');
 const mongoose = require("mongoose");
+const seedBrandTypes = require("./brandType");
+const { seedRatingSummary } = require("./seedRatingSummary");
 
 // Load environment variables
 const pathName = `.env.${process.env.NODE_ENV || 'development'}`;
@@ -16,6 +18,8 @@ const runAllSeeders = async () => {
         await Promise.all([
             runSeeder(),
             seedVehicleSegmentTypes(),
+            seedBrandTypes(),
+            seedRatingSummary()
         ]);
 
         console.log("✅ All seeders executed successfully.");

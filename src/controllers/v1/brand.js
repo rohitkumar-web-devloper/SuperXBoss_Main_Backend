@@ -76,7 +76,7 @@ const updateBrand = async (_req, _res) => {
             if (brand.logo) {
                 unlinkOldFile(brand.logo);
             }
-            updatedLogo = await imageUpload(_req.file.originalname, _req.file.buffer, folder);
+            updatedLogo = await imageUpload(_req.file.originalname, _req.file.buffer, 'brand');
         }
 
         const updatedData = {
