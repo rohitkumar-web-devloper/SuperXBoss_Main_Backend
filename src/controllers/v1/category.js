@@ -1,6 +1,5 @@
 const { default: mongoose } = require("mongoose");
 const { error, success } = require("../../functions/functions");
-const { imagePath } = require("../../functions/imagePath");
 const { imageUpload } = require("../../functions/imageUpload");
 const unlinkOldFile = require("../../functions/unlinkFile");
 const { CategoryModal } = require("../../schemas/categories");
@@ -105,7 +104,7 @@ const updateCategory = async (_req, _res) => {
 };
 const getCategories = async (_req, _res) => {
     try {
-        const { parent, active } = _req.query
+        const { parent, active } = _req.query || {}
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
@@ -115,10 +114,10 @@ const getCategories = async (_req, _res) => {
         if (search) {
             matchStage.name = { $regex: search, $options: "i" };
         }
-        if (active == true) {
+        if (active == "true") {
             matchStage.status = true
         }
-        if (active == false) {
+        if (active == "false") {
             matchStage.status = false
         }
         if (parent) {
@@ -164,7 +163,6 @@ const getCategories = async (_req, _res) => {
             },
             {
                 $project: {
-
                     "createdBy.access_token": 0,
                     "createdBy.password": 0,
                     "createdBy.createdAt": 0,
@@ -172,6 +170,12 @@ const getCategories = async (_req, _res) => {
                     "createdBy.role": 0,
                     "createdBy.type": 0,
                     "createdBy.status": 0,
+                    "createdBy.mobile": 0,
+                    "createdBy.whatsapp": 0,
+                    "createdBy.address": 0,
+                    "createdBy.countryCode": 0,
+                    "createdBy.updatedBy": 0,
+                    "createdBy.parent": 0,
                     "updatedBy.access_token": 0,
                     "updatedBy.password": 0,
                     "updatedBy.createdAt": 0,
@@ -179,14 +183,18 @@ const getCategories = async (_req, _res) => {
                     "updatedBy.role": 0,
                     "updatedBy.type": 0,
                     "updatedBy.status": 0,
-
+                    "updatedBy.mobile": 0,
+                    "updatedBy.whatsapp": 0,
+                    "updatedBy.address": 0,
+                    "updatedBy.countryCode": 0,
+                    "updatedBy.updatedBy": 0,
+                    "updatedBy.parent": 0,
                 }
             },
-            // Sorting and pagination
-            { $sort: { sorting: 1 } },
             {
                 $facet: {
                     data: [
+                        { $sort: { createdAt: -1 } },
                         { $skip: skip },
                         { $limit: limit },
                     ],

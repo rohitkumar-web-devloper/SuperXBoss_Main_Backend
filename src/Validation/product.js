@@ -18,6 +18,7 @@ const productJoiSchema = Joi.object({
     new_arrival: Joi.boolean().optional(),
     pop_item: Joi.boolean().optional(),
     part_no: Joi.string().trim().required(),
+    videoRemove: Joi.string().optional(),
     segment_type: Joi.array()
         .items(Joi.string().custom(objectId).messages({
             'string.base': `"segment_type" must contain string ObjectIds`,
