@@ -6,6 +6,7 @@ const categoryRouter = require('./admin/category.route');
 const couponRouter = require('./admin/coupon.route');
 const customerRouter = require('./admin/customer.route');
 const faqRouter = require('./admin/faq.route');
+const productRouter = require('./admin/product.route');
 const ratingRouter = require('./admin/ratingSummery.route');
 const userRouter = require('./admin/user.route')
 const vehicleSegmentType = require('./admin/vehicleSegmentType.route');
@@ -25,6 +26,7 @@ router.use("/faq", authenticateUser, faqRouter);
 router.use("/coupon", authenticateUser, couponRouter);
 router.use("/rating", authenticateUser, ratingRouter);
 router.use("/customer", customerRouter);
+router.use("/product", authenticateUser, productRouter);
 
 /* Export the router */
 module.exports = { router }

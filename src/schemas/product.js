@@ -39,7 +39,7 @@ const productSchema = new mongoose.Schema({
     trim: true,
   },
   segment_type: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: [mongoose.Schema.Types.ObjectId],
     ref: 'vehicle_segment_types',
     required: true,
   },
@@ -55,12 +55,17 @@ const productSchema = new mongoose.Schema({
   any_discount: {
     type: Number,
     min: 0,
-    max: 100,
+    max: 100
   },
   brand_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'brands',
     required: true,
+  },
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "users",
+    default: null
   },
   item_stock: {
     type: Number,
@@ -113,6 +118,10 @@ const productSchema = new mongoose.Schema({
     ref: 'User',
     required: true,
   },
+  updatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'users'
+  },
   images: {
     type: [String],
     validate: [arrayLimit, '{PATH} exceeds the limit of 5'],
@@ -133,7 +142,7 @@ const productSchema = new mongoose.Schema({
         },
       },
     ],
-    default: undefined, // Makes the array optional
+    default: [],
   },
 }, {
   timestamps: true
