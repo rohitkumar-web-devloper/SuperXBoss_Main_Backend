@@ -94,7 +94,7 @@ const updateBrand = async (_req, _res) => {
     }
 };
 
-const getBrands = async (_req, res) => {
+const getBrands = async (_req, _res) => {
     try {
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
@@ -211,7 +211,7 @@ const getBrands = async (_req, res) => {
         const brands = result[0].data;
         const total = result[0].totalCount[0]?.count || 0;
 
-        return res.status(200).json(
+        return _res.status(200).json(
             success(brands, "Brands fetched successfully",
                 {
                     total,
@@ -224,143 +224,20 @@ const getBrands = async (_req, res) => {
         );
 
     } catch (error) {
-        return _req.status(500).json({ success: false, message: error.message });
+        return _res.status(500).json({ success: false, message: error.message });
     }
 };
 
-const getActiveBrands = async (_req, res) => {
+const getActiveBrands = async (_req, _res) => {
     try {
-        const page = parseInt(_req.query.page) || 1;
-        const limit = parseInt(_req.query.page_size) || 15;
-        const skip = (page - 1) * limit;
-        const search = _req.query.search || "";
-
-        const matchStage = search
-            ? { name: { $regex: search, $options: "i" } }
-            : {};
-
-        const aggregationPipeline = [
-            { $match: matchStage },
-
-            // Lookup createdBy details
-            {
-                $lookup: {
-                    from: "vehicle_segment_types",
-                    localField: "brand_segment",
-                    foreignField: "_id",
-                    as: "brand_segment"
-                }
-            },
-            {
-                $unwind: {
-                    path: "$brand_segment",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "createdBy",
-                    foreignField: "_id",
-                    as: "createdBy"
-                }
-            },
-            {
-                $unwind: {
-                    path: "$createdBy",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-
-            // Lookup updatedBy details
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "updatedBy",
-                    foreignField: "_id",
-                    as: "updatedBy"
-                }
-            },
-            {
-                $unwind: {
-                    path: "$updatedBy",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $project: {
-                    "createdBy.access_token": 0,
-                    "createdBy.password": 0,
-                    "createdBy.createdAt": 0,
-                    "createdBy.updatedAt": 0,
-                    "createdBy.role": 0,
-                    "createdBy.type": 0,
-                    "createdBy.status": 0,
-                    "updatedBy.access_token": 0,
-                    "updatedBy.password": 0,
-                    "updatedBy.createdAt": 0,
-                    "updatedBy.updatedAt": 0,
-                    "updatedBy.role": 0,
-                    "updatedBy.type": 0,
-                    "updatedBy.status": 0,
-
-                }
-            },
-            // Sorting and pagination
-            { $sort: { sorting: 1 } },
-            {
-                $facet: {
-                    data: [
-                        {
-                            $group: {
-                                _id: "$_id",
-                                name: { $first: "$name" },
-                                logo: { $first: "$logo" },
-                                description: { $first: "$description" },
-                                type: { $first: "$type" },
-                                brand_day: { $first: "$brand_day" },
-                                brand_day_offer: { $first: "$brand_day_offer" },
-                                brand_segment: { $push: "$brand_segment" },
-                                sorting: { $first: "$sorting" },
-                                status: { $first: "$status" },
-                                updatedAt: { $first: "$updatedAt" },
-                                createdAt: { $first: "$createdAt" },
-                                updatedBy: { $first: "$updatedBy" },
-                                createdBy: { $first: "$createdBy" },
-                            }
-                        },
-                        { $skip: skip },
-                        { $limit: limit },
-                    ],
-                    totalCount: [
-                        { $count: "count" }
-                    ]
-                }
-            }
-        ];
-
-
-        const result = await BrandModel.aggregate(aggregationPipeline);
-
-        const brands = result[0].data;
-        const total = result[0].totalCount[0]?.count || 0;
-
-        return res.status(200).json(
-            success(brands, "Brands fetched successfully",
-                {
-                    total,
-                    page,
-                    limit,
-                    totalPages: Math.ceil(total / limit),
-                },
-
-            )
+        const result = await BrandModel.find({ status: true }).select({ createdAt: 0, updatedAt: 0, brand_segment: 0, brand_day_offer: 0, sorting: 0 });
+        return _res.status(200).json(success(result, "Brands fetched successfully")
         );
 
     } catch (error) {
-        return _req.status(500).json({ success: false, message: error.message });
+        return _res.status(500).json({ success: false, message: error.message });
     }
 };
 
 
-module.exports = { createBrand, updateBrand, getBrands }
+module.exports = { createBrand, updateBrand, getBrands, getActiveBrands }

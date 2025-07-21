@@ -33,6 +33,8 @@ const customerVerifyOtpSchema = Joi.object({
       'string.pattern.base': 'OTP must be exactly 4 digits.',
       'any.required': 'OTP is required.',
     }),
+  fcm_token: Joi.string()
+    .required()
 });
 
 
@@ -94,16 +96,16 @@ const customerUpdateSchema = Joi.object({
   }),
 
   gst_number: Joi.when('type', {
-  is: 'b2b',
-  then: Joi.string()
-    .pattern(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/)
-    .required()
-    .messages({
-      'string.pattern.base': 'GST number must be a valid 15-character GSTIN.',
-      'string.empty': 'GST number is required for b2b.',
-    }),
-  otherwise: Joi.string().optional(),
-}),
+    is: 'b2b',
+    then: Joi.string()
+      .pattern(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/)
+      .required()
+      .messages({
+        'string.pattern.base': 'GST number must be a valid 15-character GSTIN.',
+        'string.empty': 'GST number is required for b2b.',
+      }),
+    otherwise: Joi.string().optional(),
+  }),
 
   business_contact_no: Joi.string().when('type', {
     is: 'b2b',

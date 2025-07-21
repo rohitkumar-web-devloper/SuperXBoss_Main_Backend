@@ -1,10 +1,9 @@
 const { error, success } = require("../../functions/functions");
-const { imagePath } = require("../../functions/imagePath");
 const { imageUpload } = require("../../functions/imageUpload");
 const unlinkOldFile = require("../../functions/unlinkFile");
 const { CustomerModal } = require('../../schemas/customers');
 const { customerLoginSchema, customerVerifyOtpSchema, customerUpdateSchema } = require("../../Validation/customer");
-const { hashPassword, comparePassword, generateToken } = require("../../Helper");
+const { generateToken } = require("../../Helper");
 
 const loginCustomer = async (_req, _res) => {
     try {
@@ -45,12 +44,12 @@ const loginCustomer = async (_req, _res) => {
 
 const verifyOTP = async (_req, _res) => {
     try {
-        const { error: customError, value } = customerVerifyOtpSchema.validate({ ..._req.body });
+        const { error: customError } = customerVerifyOtpSchema.validate({ ..._req.body });
         if (customError) {
             return _res.status(400).json(error(400, customError.details.map(err => err.message)[0]));
         }
 
-        const { mobile, otp } = _req.body;
+        const { mobile, otp, fcm_token } = _req.body;
         const customer = await CustomerModal.findOne({ mobile });
         if (!customer) {
             return _res.status(404).json(error('Customer not found'));
@@ -65,6 +64,7 @@ const verifyOTP = async (_req, _res) => {
         // Clear OTP after successful verification
         customer.otp = null;
         customer.token = token;
+        customer.fcm_token = fcm_token;
         await customer.save();
 
         return _res.status(200).json(success(customer, 'OTP verified successfully'));

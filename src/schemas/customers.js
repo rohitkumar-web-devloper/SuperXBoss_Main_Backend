@@ -38,7 +38,7 @@ const customerSchema = new mongoose.Schema(
             trim: true,
             uppercase: true
         },
-        refrence_code: {
+        reference_code: {
             type: String,
             trim: true,
             uppercase: true
@@ -99,7 +99,7 @@ const customerSchema = new mongoose.Schema(
         },
         otp: {
             type: String,
-            default:null
+            default: null
         }
     },
     {
