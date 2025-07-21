@@ -1,14 +1,13 @@
 const { error, success } = require("../../functions/functions");
 const { BrandModel } = require("../../schemas/brands");
 const { brandSchema, updateBrandSchema } = require("../../Validation/brand");
-const { imagePath } = require("../../functions/imagePath");
 const { imageUpload } = require("../../functions/imageUpload");
 
 const createBrand = async (_req, _res) => {
     try {
         const { _id } = _req.user;
         const { originalname, buffer } = _req.file;
-        console.log(_req.body, "_req.body");
+
 
         const { error: customError, value } = brandSchema.validate(
             { ..._req.body, logo: _req.file },
@@ -48,7 +47,7 @@ const createBrand = async (_req, _res) => {
 const updateBrand = async (_req, _res) => {
     try {
         const { _id, } = _req.user;
-        const { brandId } = _req.body;
+        const { id } = _req.params;
 
         const { error: customError, value } = updateBrandSchema.validate(_req.body, { abortEarly: false });
 
@@ -57,7 +56,7 @@ const updateBrand = async (_req, _res) => {
         }
 
         //  Find brand
-        const brand = await BrandModel.findById(brandId);
+        const brand = await BrandModel.findById(id);
         if (!brand) {
             return _res.status(404).json(error(404, 'Brand not found'));
         }
@@ -65,7 +64,7 @@ const updateBrand = async (_req, _res) => {
         //  Check for duplicate name (excluding itself)
         const existing = await BrandModel.findOne({
             name: { $regex: `^${value.name}$`, $options: 'i' },
-            _id: { $ne: brandId }
+            _id: { $ne: id }
         });
         if (existing) {
             return _res.status(409).json(error(409, 'Another brand with this name already exists'));
@@ -85,7 +84,7 @@ const updateBrand = async (_req, _res) => {
             updatedBy: _id
         };
 
-        const updatedBrand = await BrandModel.findByIdAndUpdate(brandId, updatedData, { new: true });
+        const updatedBrand = await BrandModel.findByIdAndUpdate(id, updatedData, { new: true });
 
         const { createdAt, updatedAt, ...rest } = updatedBrand.toObject();
         return _res.status(200).json(success(rest, 'Brand updated successfully'));

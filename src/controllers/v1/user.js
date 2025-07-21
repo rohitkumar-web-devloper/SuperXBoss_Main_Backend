@@ -83,15 +83,15 @@ const createUser = async (_req, _res) => {
         });
 
         if (existingUser) {
-            return _res.status(409).json({ error: 'User already exists with this email or mobile or whatsapp number' });
+            return _res.status(409).json(error(400, "User already exists with this email or mobile or whatsapp number"));
         }
-        const haspassword = await hashPassword(value.password)
+        const hasPassword = await hashPassword(value.password)
         let file = '';
         if (originalname && buffer) {
             file = await imageUpload(originalname, buffer, "user")
         }
         const newUser = new UserModal({
-            ...value, password: haspassword, profile: file,
+            ...value, password: hasPassword, profile: file,
             createdBy: _id
         });
         const savedUser = await newUser.save();
@@ -100,13 +100,13 @@ const createUser = async (_req, _res) => {
     } catch (err) {
         console.log(err.message);
 
-        return _res.status(500).json(error(500, "Internal server errror"));
+        return _res.status(500).json(error(500, "Internal server error"));
     }
 };
 
 const updateUser = async (_req, _res) => {
     try {
-        const { userId } = _req.body;
+        const { userId } = _req.params;
         const { _id } = _req.user
         const { originalname, buffer } = _req?.file || {};
         if (!userId) {
@@ -144,9 +144,7 @@ const updateUser = async (_req, _res) => {
         }
 
         if (duplicateUser) {
-            return _res.status(409).json({
-                error: 'Another user exists with this email, mobile, or WhatsApp number',
-            });
+            return _res.status(409).json(error(400, "Another user exists with this email, mobile, or WhatsApp number"));
         }
 
         // Hash password if updating
@@ -174,10 +172,7 @@ const updateUser = async (_req, _res) => {
         const updatedUser = await user.save();
         const { password, access_token, createdAt, updatedAt, ...rest } = updatedUser.toObject();
 
-        return _res.status(200).json({
-            message: 'User updated successfully',
-            user: rest
-        });
+        return _res.status(200).json(success(rest, "User updated successfully"));
     } catch (err) {
         console.error('Update User Error:', err);
         return _res.status(500).json({ error: 'Internal server error' });

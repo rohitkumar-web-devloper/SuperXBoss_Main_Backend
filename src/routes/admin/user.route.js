@@ -8,7 +8,7 @@ const { upload } = require("../../middleware/upload");
 userRouter.post('/login', asyncHandler(loginUser));
 userRouter.post('/logout', authenticateUser, asyncHandler(logoutUser));
 userRouter.post('/user', authenticateUser, upload.single('profile'), asyncHandler(createUser));
-userRouter.put('/user', authenticateUser, upload.single('profile'), asyncHandler(updateUser));
+userRouter.put('/user/:userId', authenticateUser, upload.single('profile'), asyncHandler(updateUser));
 userRouter.get('/users', authenticateUser, asyncHandler(getUser));
 
 // Direct export (CommonJS style)
