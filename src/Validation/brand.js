@@ -30,7 +30,7 @@ const brandSchema = Joi.object({
   brand_day: Joi.boolean().default(false).messages({
     'boolean.base': `brand_day must be a boolean`,
   }),
-  brand_day_offer: Joi.number().default(0).messages({
+  brand_day_offer: Joi.number().optional().default(0).messages({
     'number.base': `brand_day_offer must be a number`,
   }),
   brand_segment: Joi.array()

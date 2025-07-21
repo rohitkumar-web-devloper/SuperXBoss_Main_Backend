@@ -17,7 +17,7 @@ const router = express.Router();
 
 /* Routes */
 router.use("/", userRouter);
-router.use("/", authenticateUser, categoryRouter);
+router.use("/category", authenticateUser, categoryRouter);
 router.use("/brand", authenticateUser, brandRouter);
 router.use("/banner", authenticateUser, bannerRouter);
 router.use("/vehicleSegmentType", authenticateUser, vehicleSegmentType);
