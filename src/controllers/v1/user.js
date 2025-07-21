@@ -185,93 +185,88 @@ const updateUser = async (_req, _res) => {
 };
 
 const getUser = async (_req, _res) => {
-  try {
-    const { _id } = _req.user;
-    const page = parseInt(_req.query.page) || 1;
-    const limit = parseInt(_req.query.page_size) || 15;
-    const skip = (page - 1) * limit;
-    const search = _req.query.search || "";
+    try {
+        const { _id } = _req.user;
+        const page = parseInt(_req.query.page) || 1;
+        const limit = parseInt(_req.query.page_size) || 15;
+        const skip = (page - 1) * limit;
+        const search = _req.query.search || "";
 
-    const matchQuery = {
-      _id: { $ne: new mongoose.Types.ObjectId(_id) },
-      $or: [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-      ],
-    };
+        const matchQuery = {
+            _id: { $ne: new mongoose.Types.ObjectId(_id) },
+            $or: [
+                { name: { $regex: search, $options: "i" } },
+                { email: { $regex: search, $options: "i" } },
+            ],
+        };
 
-    const users = await UserModal.aggregate([
-      { $match: matchQuery },
+        const users = await UserModal.aggregate([
+            { $match: matchQuery },
 
-      // Lookup createdBy
-      {
-        $lookup: {
-          from: "users",
-          localField: "createdBy",
-          foreignField: "_id",
-          as: "createdBy",
-        },
-      },
-      { $unwind: { path: "$createdBy", preserveNullAndEmptyArrays: true } },
+            // Lookup createdBy
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "createdBy",
+                    foreignField: "_id",
+                    as: "createdBy",
+                },
+            },
+            { $unwind: { path: "$createdBy", preserveNullAndEmptyArrays: true } },
 
-      // Lookup updatedBy
-      {
-        $lookup: {
-          from: "users",
-          localField: "updatedBy",
-          foreignField: "_id",
-          as: "updatedBy",
-        },
-      },
-      { $unwind: { path: "$updatedBy", preserveNullAndEmptyArrays: true } },
+            // Lookup updatedBy
+            {
+                $lookup: {
+                    from: "users",
+                    localField: "updatedBy",
+                    foreignField: "_id",
+                    as: "updatedBy",
+                },
+            },
+            { $unwind: { path: "$updatedBy", preserveNullAndEmptyArrays: true } },
 
-      // Project all fields, but restrict fields from createdBy and updatedBy
-      {
-        $project: {
-          _id: 1,
-          name: 1,
-          email: 1,
-          mobile: 1,
-          role: 1,
-          status: 1,
-          createdAt: 1,
-          updatedAt: 1,
-          // All other top-level fields
-          createdBy: {
-            _id: "$createdBy._id",
-            name: "$createdBy.name",
-            email: "$createdBy.email",
-          },
-          updatedBy: {
-            _id: "$updatedBy._id",
-            name: "$updatedBy.name",
-            email: "$updatedBy.email",
-          },
-        },
-      },
+            // Project all fields, but restrict fields from createdBy and updatedBy
+            {
+                $project: {
+                    "createdBy.access_token": 0,
+                    "createdBy.password": 0,
+                    "createdBy.createdAt": 0,
+                    "createdBy.updatedAt": 0,
+                    "createdBy.role": 0,
+                    "createdBy.type": 0,
+                    "createdBy.status": 0,
+                    "updatedBy.access_token": 0,
+                    "updatedBy.password": 0,
+                    "updatedBy.createdAt": 0,
+                    "updatedBy.updatedAt": 0,
+                    "updatedBy.role": 0,
+                    "updatedBy.type": 0,
+                    "updatedBy.status": 0,
+                },
+            },
 
-      { $sort: { createdAt: -1 } },
-      { $skip: skip },
-      { $limit: limit },
-    ]);
+            { $sort: { createdAt: -1 } },
+            { $skip: skip },
+            { $limit: limit },
+        ]);
 
-    const total = await UserModal.countDocuments(matchQuery);
+        const total = await UserModal.countDocuments(matchQuery);
 
-    return _res.status(200).json(
-      success(   users, "Users fetched successfully" ,
-        {
-          total,
-          page,
-          limit,
-          totalPages: Math.ceil(total / limit),
-        },
-       
-      )
-    );
-  } catch (err) {
-    console.error("Error in getUser:", err);
-    return _res.status(500).json(error(500, "Internal server error"));
-  }
+        return _res.status(200).json(
+            success(users, "Users fetched successfully",
+                {
+                    total,
+                    page,
+                    limit,
+                    totalPages: Math.ceil(total / limit),
+                },
+
+            )
+        );
+    } catch (err) {
+        console.error("Error in getUser:", err);
+        return _res.status(500).json(error(500, "Internal server error"));
+    }
 };
 
 

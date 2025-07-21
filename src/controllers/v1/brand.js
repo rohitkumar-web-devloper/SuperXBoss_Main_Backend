@@ -6,8 +6,9 @@ const { imageUpload } = require("../../functions/imageUpload");
 
 const createBrand = async (_req, _res) => {
     try {
-        const { _id, name: userName } = _req.user;
+        const { _id } = _req.user;
         const { originalname, buffer } = _req.file;
+        console.log(_req.body, "_req.body");
 
         const { error: customError, value } = brandSchema.validate(
             { ..._req.body, logo: _req.file },
@@ -16,7 +17,6 @@ const createBrand = async (_req, _res) => {
         if (customError) {
             return _res.status(400).json(error(400, customError.details.map(err => err.message)[0]));
         }
-
         const existing = await BrandModel.findOne({
             name: { $regex: `^${value.name}$`, $options: 'i' }
         });
@@ -35,8 +35,8 @@ const createBrand = async (_req, _res) => {
             createdBy: _id
         });
 
-        const savebrand = await brand.save();
-        const { createdAt, updatedAt, ...rest } = savebrand.toObject();
+        const saveBrand = await brand.save();
+        const { createdAt, updatedAt, ...rest } = saveBrand.toObject();
 
         return _res.status(201).json(success(rest, 'Brand created successfully'));
     } catch (err) {
@@ -112,6 +112,20 @@ const getBrands = async (_req, res) => {
             // Lookup createdBy details
             {
                 $lookup: {
+                    from: "vehicle_segment_types",
+                    localField: "brand_segment",
+                    foreignField: "_id",
+                    as: "brand_segment"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$brand_segment",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $lookup: {
                     from: "users",
                     localField: "createdBy",
                     foreignField: "_id",
@@ -164,6 +178,24 @@ const getBrands = async (_req, res) => {
             {
                 $facet: {
                     data: [
+                        {
+                            $group: {
+                                _id: "$_id",
+                                name: { $first: "$name" },
+                                logo: { $first: "$logo" },
+                                description: { $first: "$description" },
+                                type: { $first: "$type" },
+                                brand_day: { $first: "$brand_day" },
+                                brand_day_offer: { $first: "$brand_day_offer" },
+                                brand_segment: { $push: "$brand_segment" },
+                                sorting: { $first: "$sorting" },
+                                status: { $first: "$status" },
+                                updatedAt: { $first: "$updatedAt" },
+                                createdAt: { $first: "$createdAt" },
+                                updatedBy: { $first: "$updatedBy" },
+                                createdBy: { $first: "$createdBy" },
+                            }
+                        },
                         { $skip: skip },
                         { $limit: limit },
                     ],
@@ -173,6 +205,7 @@ const getBrands = async (_req, res) => {
                 }
             }
         ];
+
 
         const result = await BrandModel.aggregate(aggregationPipeline);
 

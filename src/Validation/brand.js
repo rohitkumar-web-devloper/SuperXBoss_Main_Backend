@@ -33,11 +33,16 @@ const brandSchema = Joi.object({
   brand_day_offer: Joi.number().default(0).messages({
     'number.base': `brand_day_offer must be a number`,
   }),
-  brand_segment: Joi.string().custom(objectId).required().messages({
-    'string.base': `"brand_segment" must be a string`,
-    'any.required': `"brand_segment" is required`,
-    'any.invalid': `"brand_segment" must be a valid ObjectId`,
-  }),
+  brand_segment: Joi.array()
+    .items(Joi.string().custom(objectId).messages({
+      'string.base': `"brand_segment" must contain string ObjectIds`,
+      'any.invalid': `"brand_segment" must contain valid ObjectIds`,
+    }))
+    .required()
+    .messages({
+      'array.base': `"brand_segment" must be an array`,
+      'any.required': `"brand_segment" is required`,
+    }),
   sorting: Joi.number().default(0).messages({
     'number.base': `sorting must be a number`,
   }),

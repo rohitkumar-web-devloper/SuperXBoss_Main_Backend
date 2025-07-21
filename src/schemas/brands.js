@@ -16,8 +16,9 @@ const brandSchema = new mongoose.Schema(
       default: null,
     },
     type: {
-      type: String,
-      default: null,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'brand_types',
+      required: true,
     },
     brand_day: {
       type: Boolean,
@@ -28,8 +29,10 @@ const brandSchema = new mongoose.Schema(
       default: 0,
     },
     brand_segment: {
-      type: mongoose.Schema.Types.ObjectId,
-      default: null,
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'vehicle_segment_types',
+      default: [],
+      required: true, // Optional: only if brand_segment must always be set
     },
     sorting: {
       type: Number,
@@ -42,11 +45,11 @@ const brandSchema = new mongoose.Schema(
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       required: false,
-      ref:'users'
+      ref: 'users'
     },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref:'users'
+      ref: 'users'
     },
   },
   {
