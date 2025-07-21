@@ -7,11 +7,11 @@ const seedVehicleSegmentTypes = async () => {
 
   const data = [
     {
-      name: "heavy commercial vehicle",
+      name: "Heavy commercial vehicle",
       icon: "default-image.jpg",
     },
     {
-      name: "tractor parts",
+      name: "Tractor parts",
       icon: "default-image.jpg",
     },
     {
@@ -19,15 +19,15 @@ const seedVehicleSegmentTypes = async () => {
       icon: "default-image.jpg",
     },
     {
-      name: "two wheeler",
+      name: "Two wheeler",
       icon: "default-image.jpg",
     },
     {
-      name: "three wheeler",
+      name: "Three wheeler",
       icon: "default-image.jpg",
     },
     {
-      name: "industrial use",
+      name: "Industrial use",
       icon: "default-image.jpg",
     },
   ];
@@ -38,8 +38,6 @@ const seedVehicleSegmentTypes = async () => {
     console.log('✅ VehicleSegmentTypes seeded successfully');
   } catch (err) {
     console.error('❌ Error seeding VehicleSegmentTypes:', err);
-  } finally {
-    await mongoose.disconnect();
   }
 };
 

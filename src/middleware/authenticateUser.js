@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { UserModal } = require('../schemas/user');
 const { error } = require('../functions/functions');
+const { CustomerModal } = require('../schemas/customers');
 
 const authenticateUser = async (req, res, next) => {
   try {
@@ -12,19 +13,28 @@ const authenticateUser = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-
-    // Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    // Find user by ID from token
-    const user = await UserModal.findById(decoded._id);
-    if (!user || user.access_token !== token) {
-      return res.status(401).json(error(400, 'Unauthorized or token expired'));
+    let exist = null;
+    if (token) {
+      exist = await UserModal.findOne({ access_token: token })
     }
 
-    // Attach user to request
-    req.user = user;
-    next();
+    if (!exist) {
+      exist = await CustomerModal.findOne({ token })
+    }
+
+
+    if (exist) {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      if (decoded) {
+        req.user = exist;
+        next();
+      }
+
+    } else {
+      return res.status(401).json(error(401, 'Unauthorized access'));
+    }
+    // Verify token
+
 
   } catch (err) {
     console.error('Auth Middleware Error:', err);
