@@ -65,7 +65,7 @@ const verifyOTP = async (_req, _res) => {
         customer.otp = null;
         customer.token = token;
         customer.fcm_token = fcm_token;
-        await customer.save();
+        await customer.save();      
 
         return _res.status(200).json(success(customer, 'OTP verified successfully'));
 
@@ -102,7 +102,7 @@ const updateCustomer = async (_req, _res) => {
             abortEarly: false,
         });
         if (customError) {
-            return _res.status(400).json(error(400, customError.details.map(err => err.message)[0]));
+            return _res.json(error(400, customError.details.map(err => err.message)[0]));
         }
 
 

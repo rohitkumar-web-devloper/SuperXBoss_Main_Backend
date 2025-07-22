@@ -10,7 +10,7 @@ const createCategory = async (_req, _res) => {
     try {
         const { _id } = _req.user
         const { originalname, buffer } = _req?.file || {};
-        const { error: newError } = createCategorySchema.validate(_req.body);
+        const { error: newError } = createCategorySchema.validate({ ..._req.body });
         if (newError) {
             return _res.status(400).json(error(400, newError.details[0].message));
         }
@@ -54,7 +54,7 @@ const updateCategory = async (_req, _res) => {
         const { originalname, buffer } = _req?.file || {};
 
         // Validate request body
-        const { error: validationError } = updateCategorySchema.validate(_req.body);
+        const { error: validationError } = updateCategorySchema.validate({..._req.body});
         if (validationError) {
             return _res.status(400).json(error(400, validationError.details[0].message));
         }

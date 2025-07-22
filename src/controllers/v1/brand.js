@@ -6,9 +6,6 @@ const { imageUpload } = require("../../functions/imageUpload");
 const createBrand = async (_req, _res) => {
     try {
         const { _id } = _req.user;
-        const { originalname, buffer } = _req.file;
-
-
         const { error: customError, value } = brandSchema.validate(
             { ..._req.body, logo: _req.file },
             { abortEarly: false }
@@ -23,11 +20,14 @@ const createBrand = async (_req, _res) => {
             return _res.status(409).json(error(400, 'Brand with this name already exists'));
         }
 
+        const { originalname, buffer } = _req.file || {};
+        // 2. Handle Image Upload
         let file = '';
         if (buffer && originalname) {
-            file = await imageUpload(originalname, buffer, "brand");
+            file = await imageUpload(originalname, buffer, 'brand');
+        } else {
+            return _res.status(400).json(error(400, 'Image is required.'));
         }
-
         const brand = new BrandModel({
             ...value,
             logo: file,

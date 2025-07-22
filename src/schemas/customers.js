@@ -53,7 +53,7 @@ const customerSchema = new mongoose.Schema(
         },
         type: {
             type: String,
-            default: 'customer'
+            default: ''
         },
         status: {
             type: Boolean,
@@ -116,7 +116,7 @@ customerSchema.virtual('full_name').get(function () {
 
 // Indexes
 customerSchema.index({ mobile: 1 }, { unique: true }); // Mobile should be unique
-customerSchema.index({ email: 1 }, { unique: true, sparse: true });
+// customerSchema.index({ email: 1 }, { unique: true, sparse: true });
 customerSchema.index({ refer_code: 1 }, { unique: true, sparse: true });
 
 const CustomerModal = mongoose.model('customers', customerSchema);
