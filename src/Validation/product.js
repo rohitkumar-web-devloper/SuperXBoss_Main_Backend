@@ -18,15 +18,16 @@ const productJoiSchema = Joi.object({
     new_arrival: Joi.boolean().optional(),
     pop_item: Joi.boolean().optional(),
     part_no: Joi.string().trim().required(),
+    videoRemove: Joi.string().optional(),
     segment_type: Joi.array()
         .items(Joi.string().custom(objectId).messages({
-            'string.base': `"brand_segment" must contain string ObjectIds`,
-            'any.invalid': `"brand_segment" must contain valid ObjectIds`,
+            'string.base': `"segment_type" must contain string ObjectIds`,
+            'any.invalid': `"segment_type" must contain valid ObjectIds`,
         }))
         .required()
         .messages({
-            'array.base': `"brand_segment" must be an array`,
-            'any.required': `"brand_segment" is required`,
+            'array.base': `"segment_type" must be an array`,
+            'any.required': `"segment_type" is required`,
         }),
     removed_images: Joi.array().items(Joi.string()).optional(),
     min_qty: Joi.number().min(1).optional(),
@@ -44,13 +45,8 @@ const productJoiSchema = Joi.object({
     unit: Joi.string().optional(),
     status: Joi.boolean().optional(),
     trend_part: Joi.boolean().optional(),
-    bulk_discount: Joi.array()
-        .items(
-            Joi.object({
-                count: Joi.number().min(1).required(),
-                discount: Joi.number().min(0).max(100).required(),
-            })
-        )
+    bulk_discount: Joi
+        .string()
         .optional(),
 });
 

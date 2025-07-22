@@ -96,14 +96,22 @@ const updateBrand = async (_req, _res) => {
 
 const getBrands = async (_req, _res) => {
     try {
+        const { active } = _req.query || {}
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
         const search = _req.query.search || "";
 
-        const matchStage = search
-            ? { name: { $regex: search, $options: "i" } }
-            : {};
+        const matchStage = {};
+        if (search) {
+            matchStage.name = { $regex: search, $options: "i" };
+        }
+        if (active == "true") {
+            matchStage.status = true
+        }
+        if (active == "false") {
+            matchStage.status = false
+        }
 
         const aggregationPipeline = [
             { $match: matchStage },

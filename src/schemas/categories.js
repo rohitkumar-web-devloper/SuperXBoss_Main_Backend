@@ -34,7 +34,7 @@ const CategorySchema = new mongoose.Schema({
 
     status: {
         type: Boolean,
-        default: true,
+        default: false,
     },
     user: {
         type: mongoose.Schema.Types.ObjectId,
