@@ -4,6 +4,37 @@ const { VehicleSegmentTypeModel } = require('../../schemas/VehicleSegmentType ')
 const { vehicleSegmentTypeSchema } = require('../../Validation/vehicleSegmentType');
 const { imageUpload } = require("../../functions/imageUpload");
 
+const createVehicleSegmentTypes = async (_req, _res) => {
+    try {
+        const { error: validationError } = vehicleSegmentTypeSchema.validate(_req.body, { abortEarly: false });
+        if (validationError) {
+            return _res.status(400).json(error(400, validationError.details.map(err => err.message)[0]));
+        }
+        const { name, status } = _req.body;
+        const { _id } = _req.user;
+        if (!_req?.file) {
+            return _res.status(400).json(error(400, "Image is required.."));
+        }
+        const segment = await VehicleSegmentTypeModel.findOne({ name });
+        if (segment) {
+            return _res.status(400).json(error(400, "Segment Already exist."));
+        }
+        const { originalname, buffer } = _req?.file || {};
+        const create = new VehicleSegmentTypeModel({ name, status, createdBy: _id })
+
+        if (originalname && buffer) {
+            create.icon = await imageUpload(originalname, buffer, 'segment')
+        }
+        const savedSegment = await create.save()
+        return _res.status(201).json(success(savedSegment));
+
+
+    } catch (err) {
+        console.error('Update Segment Error:', err);
+        return _res.status(500).json(error(500, err.message));
+    }
+}
+
 const updateVehicleSegmentType = async (_req, _res) => {
     try {
         const { error: validationError, value } = vehicleSegmentTypeSchema.validate(_req.body, { abortEarly: false });
@@ -12,7 +43,7 @@ const updateVehicleSegmentType = async (_req, _res) => {
         }
 
         const { _id } = _req.user;
-        const { segmentId } = _req.body || {};
+        const { segmentId } = _req.params || {};
 
         const segment = await VehicleSegmentTypeModel.findById(segmentId);
         if (!segment) {
@@ -55,12 +86,15 @@ const updateVehicleSegmentType = async (_req, _res) => {
 };
 
 
+
+
 const getVehicleSegmentTypes = async (_req, res) => {
     try {
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
         const search = _req.query.search || '';
+        const pagination = _req.query.pagination || '';
 
         const matchStage = search
             ? { name: { $regex: search, $options: 'i' } }
@@ -149,5 +183,18 @@ const getVehicleSegmentTypes = async (_req, res) => {
         return _req.status(500).json({ success: false, message: error.message });
     }
 };
+const getVehicleSegmentWithOutPagination = async (_req, res) => {
+    try {
+        const result = await VehicleSegmentTypeModel.find({ status: true }).sort({ createdAt: -1 })
+        return res.status(200).json(
+            success(
+                result,
+                "Vehicle segment types fetched successfully",
+            )
+        );
+    } catch (error) {
+        return _req.status(500).json({ success: false, message: error.message });
+    }
+};
 
-module.exports = { updateVehicleSegmentType, getVehicleSegmentTypes }
+module.exports = { updateVehicleSegmentType, getVehicleSegmentTypes, createVehicleSegmentTypes, getVehicleSegmentWithOutPagination }

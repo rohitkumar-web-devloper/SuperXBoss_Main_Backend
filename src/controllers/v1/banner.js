@@ -41,7 +41,7 @@ const createBanner = async (_req, _res) => {
 const updateBanner = async (_req, _res) => {
     try {
         const { _id } = _req.user;
-        const { bannerId } = _req.body;
+        const { bannerId } = _req.params;
 
         const { error: customError, value } = updateBannerSchema.validate(
             { ..._req.body, image: _req.file },
@@ -172,6 +172,7 @@ const getBanners = async (_req, _res) => {
                     'updatedBy.name': 1,
                 },
             },
+            { $sort: { createdAt: -1 } },
             { $skip: skip },
             { $limit: limit },
         ];

@@ -138,8 +138,13 @@ const getProducts = async (_req, _res) => {
         const search = _req.query.search || "";
 
         const matchStage = {};
+
         if (search) {
-            matchStage.name = { $regex: search, $options: "i" };
+            matchStage.$or = [
+                { name: { $regex: search, $options: "i" } },
+                { sku_id: { $regex: search, $options: "i" } },
+                { hsn_code: { $regex: search, $options: "i" } }
+            ];
         }
         if (active == "true") {
             matchStage.status = true;

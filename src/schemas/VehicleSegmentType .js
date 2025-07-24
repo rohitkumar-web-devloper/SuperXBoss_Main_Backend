@@ -10,7 +10,11 @@ const vehicleSegmentTypeSchema = new mongoose.Schema(
     },
     icon: {
       type: String,
-      default:null
+      default: null
+    },
+    status: {
+      type: Boolean,
+      default: true
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

@@ -24,13 +24,6 @@ const bannerSchema = Joi.object({
 
 
 const updateBannerSchema = Joi.object({
-  bannerId: Joi.string()
-    .required()
-    .messages({
-      'string.base': 'Brand ID must be a string.',
-      'string.empty': 'Brand ID cannot be empty.',
-      'any.required': 'Brand ID is required.',
-    }),
   image: Joi.object().min(1).optional().messages({
     'object.base': 'Logo must be an object.',
     'object.min': 'Logo must contain at least one key.',

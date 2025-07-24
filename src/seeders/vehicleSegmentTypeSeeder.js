@@ -8,27 +8,27 @@ const seedVehicleSegmentTypes = async () => {
   const data = [
     {
       name: "Heavy commercial vehicle",
-      icon: "default-image.jpg",
+      icon: "",
     },
     {
       name: "Tractor parts",
-      icon: "default-image.jpg",
+      icon: "",
     },
     {
       name: "passenger car",
-      icon: "default-image.jpg",
+      icon: "",
     },
     {
       name: "Two wheeler",
-      icon: "default-image.jpg",
+      icon: "",
     },
     {
       name: "Three wheeler",
-      icon: "default-image.jpg",
+      icon: "",
     },
     {
       name: "Industrial use",
-      icon: "default-image.jpg",
+      icon: "",
     },
   ];
 

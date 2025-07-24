@@ -1,13 +1,13 @@
 const Joi = require('joi');
 
 const customMessages = {
-  'string.base': '{#label} should be a type of text',
-  'string.empty': '{#label} cannot be empty',
-  'string.max': '{#label} should not exceed {#limit} characters',
-  'number.base': '{#label} should be a type of number',
-  'boolean.base': '{#label} should be a type of boolean',
-  'any.required': '{#label} is a required field',
-  'any.only': '{#label} must be one of {#valids}'
+    'string.base': '{#label} should be a type of text',
+    'string.empty': '{#label} cannot be empty',
+    'string.max': '{#label} should not exceed {#limit} characters',
+    'number.base': '{#label} should be a type of number',
+    'boolean.base': '{#label} should be a type of boolean',
+    'any.required': '{#label} is a required field',
+    'any.only': '{#label} must be one of {#valids}'
 };
 
 const createFaqSchema = Joi.object({
@@ -54,12 +54,6 @@ const createFaqSchema = Joi.object({
 }).options({ abortEarly: false });
 
 const updateFaqSchema = Joi.object({
-    faqId: Joi.string()
-        .required()
-        .messages({
-            ...customMessages,
-            'any.required': 'FAQ ID is required'
-        }),
     question: Joi.string()
         .max(200)
         .messages({

@@ -35,14 +35,14 @@ const createFAQ = async (_req, _res) => {
 
 const updateFAQ = async (_req, _res) => {
     try {
-        const { error: customError, value } = updateFaqSchema.validate({..._req.body});
+        const { error: customError, value } = updateFaqSchema.validate({ ..._req.body });
 
         if (customError) {
             return _res.status(400).json(error(400, customError.details.map(err => err.message)[0]));
         }
 
         const { _id } = _req.user;
-        const { faqId } = _req.body || {};
+        const { faqId } = _req.params;
         const faq = await FAQModel.findById(faqId);
         if (!faq) {
             return _res.status(404).json(error(404, 'FAQ not found'));
@@ -121,7 +121,7 @@ const getFAQs = async (_req, res) => {
                     "createdBy.status": 0,
                     "createdBy.createdAt": 0,
                     "createdBy.updatedAt": 0,
-                  
+
                 }
             },
             { $sort: { sorting: 1, createdAt: -1 } },

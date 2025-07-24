@@ -129,6 +129,9 @@ const getCoupon = async (_req, _res) => {
                     'updatedBy._id': 1,
                     'updatedBy.name': 1
                 }
+            },
+            {
+                $sort: { createdAt: -1 }
             }
         ]);
 
