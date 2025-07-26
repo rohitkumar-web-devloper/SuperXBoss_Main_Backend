@@ -4,6 +4,6 @@ const { asyncHandler } = require("../../middleware/error-handler");
 const { createCoupon, updateCoupon, getCoupon } = require("../../controllers/v1/coupon");
 
 couponRouter.post('/', asyncHandler(createCoupon));
-couponRouter.put('/', asyncHandler(updateCoupon));
+couponRouter.put('/:couponId', asyncHandler(updateCoupon));
 couponRouter.get('/', asyncHandler(getCoupon));
 module.exports = couponRouter;

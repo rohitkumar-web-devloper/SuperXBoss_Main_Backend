@@ -57,13 +57,13 @@ couponSchema.index({ status: 1 });
 couponSchema.index({ end_date: 1 });
 
 // Virtual for checking if coupon is active
-couponSchema.virtual('isActive').get(function() {
+couponSchema.virtual('isActive').get(function () {
   const now = new Date();
   return this.status && now >= this.start_date && now <= this.end_date;
 });
 
 // Pre-save hook to uppercase coupon code
-couponSchema.pre('save', function(next) {
+couponSchema.pre('save', function (next) {
   if (this.code) {
     this.code = this.code.toUpperCase();
   }
@@ -72,4 +72,4 @@ couponSchema.pre('save', function(next) {
 
 const CouponModel = mongoose.model('coupons', couponSchema);
 
-module.exports = {CouponModel};
+module.exports = { CouponModel };

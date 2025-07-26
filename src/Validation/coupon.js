@@ -1,8 +1,8 @@
 const Joi = require('joi');
 
 const createCouponSchema = Joi.object({
-    code: Joi.string()
-        .required()
+    code: Joi.string().allow("", null)
+        .optional()
         .uppercase()
         .pattern(/^[A-Z0-9]+$/)
         .messages({
@@ -33,9 +33,9 @@ const createCouponSchema = Joi.object({
             'any.required': 'Minimum cart amount is required'
         }),
 
-    description: Joi.string()
+    description: Joi.string().allow("", null)
         .max(500)
-        .messages({
+        .optional({
             'string.max': 'Description cannot exceed 500 characters'
         }),
 
@@ -64,13 +64,7 @@ const createCouponSchema = Joi.object({
 
 
 const updateCouponSchema = Joi.object({
-    couponId: Joi.string()
-        .required()
-        .messages({
-            'string.empty': 'Coupon ID is required',
-            'any.required': 'Coupon ID is required'
-        }),
-    code: Joi.string()
+    code: Joi.string().required()
         .uppercase()
         .pattern(/^[A-Z0-9]+$/)
         .messages({

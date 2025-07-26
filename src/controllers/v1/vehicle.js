@@ -1,5 +1,5 @@
 const { default: mongoose } = require("mongoose");
-const { success, error } = require("../../functions/functions");
+const { success, error, parseBool } = require("../../functions/functions");
 const { imageUpload } = require("../../functions/imageUpload");
 const unlinkOldFile = require("../../functions/unlinkFile");
 const { VehicleModel } = require("../../schemas/vehicle");
@@ -130,15 +130,18 @@ const getVehicle = async (_req, _res) => {
         if (search) {
             matchStage.name = { $regex: search, $options: "i" };
         }
-        if (active == "true") {
-            matchStage.status = true
-        }
-        if (active == "false") {
-            matchStage.status = false
-        }
+        const booleanFilters = {
+            status: parseBool(active),
+        };
         if (brand_id) {
-            matchStage.brand_id = new mongoose.Types.ObjectId(brand_id)
+            booleanFilters["brand_id"] = new mongoose.Types.ObjectId(brand_id)
         }
+        for (const [key, value] of Object.entries(booleanFilters)) {
+            if (value !== undefined) {
+                matchStage[key] = value;
+            }
+        }
+
         const aggregationPipeline = [
             { $match: matchStage },
 

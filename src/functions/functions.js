@@ -25,5 +25,14 @@ function info(message, data = null) {
         type: "info"
     };
 }
+const parseBool = (val) => val === "true" ? true : val === "false" ? false : undefined;
+const generateRandomCode = (length = 8) => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+        result += chars[Math.floor(Math.random() * chars.length)];
+    }
+    return result;
+};
 
-module.exports = { info, error, success }
+module.exports = { info, error, success, parseBool, generateRandomCode }

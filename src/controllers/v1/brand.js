@@ -1,4 +1,4 @@
-const { error, success } = require("../../functions/functions");
+const { error, success, parseBool } = require("../../functions/functions");
 const { BrandModel } = require("../../schemas/brands");
 const { brandSchema, updateBrandSchema } = require("../../Validation/brand");
 const { imageUpload } = require("../../functions/imageUpload");
@@ -10,11 +10,11 @@ const createBrand = async (_req, _res) => {
         const { originalname, buffer } = _req.file;
 
         const { error: customError, value } = brandSchema.validate(
-            { ..._req.body, logo: _req.file },
+            { ..._req.body },
             { abortEarly: false }
         );
         if (customError) {
-            return _res.status(400).json(error(400, customError.details.map(err => err.message)[0]));
+            return _res.status(400).json(error(400, customError.details[0]?.message));
         }
         const existing = await BrandModel.findOne({
             name: { $regex: `^${value.name}$`, $options: 'i' }
@@ -60,11 +60,9 @@ const updateBrand = async (_req, _res) => {
     try {
         const { _id, } = _req.user;
         const { id } = _req.params;
-
         const { error: customError, value } = updateBrandSchema.validate(_req.body, { abortEarly: false });
-
         if (customError) {
-            return _res.status(400).json(error(400, customError.details.map(err => err.message)[0]));
+            return _res.status(400).json(error(400, customError.details[0]?.message));
         }
 
         //  Find brand
@@ -125,22 +123,26 @@ const getBrands = async (_req, _res) => {
 
         const matchStage = {};
         const matchType = {};
+
         if (type) {
             matchType["brand_type.name"] = type?.trim();
         }
         if (search) {
             matchStage.name = { $regex: search, $options: "i" };
         }
-        if (active == "true") {
-            matchStage.status = true
+
+        const booleanFilters = {
+            status: parseBool(active),
+        };
+        for (const [key, value] of Object.entries(booleanFilters)) {
+            if (value !== undefined) {
+                matchStage[key] = value;
+            }
         }
-        if (active == "false") {
-            matchStage.status = false
-        }
+
         const aggregationPipeline = [
             { $match: matchStage },
 
-            // Lookups for related documents
             {
                 $lookup: {
                     from: "vehicle_segment_types",

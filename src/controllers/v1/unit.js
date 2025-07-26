@@ -1,4 +1,4 @@
-const { error, success } = require("../../functions/functions");
+const { error, success, parseBool } = require("../../functions/functions");
 const { UnitModel } = require("../../schemas/unit");
 const { createUnitSchema } = require("../../Validation/unit");
 
@@ -53,11 +53,14 @@ const getUnits = async (_req, _res) => {
     if (search) {
         matchStage.name = { $regex: search, $options: "i" };
     }
-    if (active == "true") {
-        matchStage.status = true
-    }
-    if (active == "false") {
-        matchStage.status = false
+
+    const booleanFilters = {
+        status: parseBool(active),
+    };
+    for (const [key, value] of Object.entries(booleanFilters)) {
+        if (value !== undefined) {
+            matchStage[key] = value;
+        }
     }
     const aggregationPipeline = [
         { $match: matchStage },

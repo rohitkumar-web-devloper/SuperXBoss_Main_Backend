@@ -1,5 +1,5 @@
 const { default: mongoose } = require("mongoose");
-const { error, success } = require("../../functions/functions");
+const { error, success, parseBool } = require("../../functions/functions");
 const { imageUpload } = require("../../functions/imageUpload");
 const unlinkOldFile = require("../../functions/unlinkFile");
 const { ProductModel } = require("../../schemas/product");
@@ -131,11 +131,10 @@ const updateProduct = async (_req, _res) => {
 }
 const getProducts = async (_req, _res) => {
     try {
-        const { active, pagination } = _req.query || {};
+        const { active, pagination, trend_part, wish_product, pop_item, new_arrival, search = "" } = _req.query || {};
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
-        const search = _req.query.search || "";
 
         const matchStage = {};
 
@@ -143,14 +142,24 @@ const getProducts = async (_req, _res) => {
             matchStage.$or = [
                 { name: { $regex: search, $options: "i" } },
                 { sku_id: { $regex: search, $options: "i" } },
-                { hsn_code: { $regex: search, $options: "i" } }
+                { hsn_code: { $regex: search, $options: "i" } },
+                { part_no: { $regex: search, $options: "i" } },
+                { customerPriceStr: { $regex: search, $options: "i" } },
+                { b2bPriceStr: { $regex: search, $options: "i" } },
             ];
         }
-        if (active == "true") {
-            matchStage.status = true;
-        }
-        if (active == "false") {
-            matchStage.status = false;
+
+        const booleanFilters = {
+            status: parseBool(active),
+            trend_part: parseBool(trend_part),
+            wish_product: parseBool(wish_product),
+            pop_item: parseBool(pop_item),
+            new_arrival: parseBool(new_arrival)
+        };
+        for (const [key, value] of Object.entries(booleanFilters)) {
+            if (value !== undefined) {
+                matchStage[key] = value;
+            }
         }
 
         const dataStages = [
@@ -196,6 +205,12 @@ const getProducts = async (_req, _res) => {
         }
 
         const aggregationPipeline = [
+            {
+                $addFields: {
+                    customerPriceStr: { $toString: "$customer_price" },
+                    b2bPriceStr: { $toString: "$b2b_price" }
+                }
+            },
             { $match: matchStage },
             {
                 $lookup: {

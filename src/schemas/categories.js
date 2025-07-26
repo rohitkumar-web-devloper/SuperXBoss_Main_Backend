@@ -23,15 +23,6 @@ const CategorySchema = new mongoose.Schema({
         default: false,
         index: true,
     },
-    trending: {
-        type: String,
-        default: "",
-    },
-    sorting: {
-        type: String,
-        default: "",
-    },
-
     status: {
         type: Boolean,
         default: false,

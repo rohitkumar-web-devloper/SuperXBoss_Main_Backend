@@ -55,9 +55,6 @@ const brandSchema = Joi.object({
       'any.invalid': `"categories" must contain valid ObjectIds`,
     }))
     .optional(),
-  sorting: Joi.number().default(0).messages({
-    'number.base': `sorting must be a number`,
-  }),
   status: Joi.boolean().default(false).messages({
     'boolean.base': `status must be a boolean`,
   }),

@@ -1,5 +1,5 @@
 const { default: mongoose } = require("mongoose");
-const { error, success } = require("../../functions/functions");
+const { error, success, parseBool } = require("../../functions/functions");
 const { imageUpload } = require("../../functions/imageUpload");
 const unlinkOldFile = require("../../functions/unlinkFile");
 const { CategoryModal } = require("../../schemas/categories");
@@ -106,7 +106,7 @@ const updateCategory = async (_req, _res) => {
 };
 const getCategories = async (_req, _res) => {
     try {
-        const { parent, active, pagination = "true" } = _req.query || {}
+        const { parent, active, pagination = "true", featured } = _req.query || {}
         const usePagination = pagination === "true";
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
@@ -115,25 +115,28 @@ const getCategories = async (_req, _res) => {
         const matchStage = {};
 
         if (search) {
-            matchStage.name = { $regex: search, $options: "i" };
+            matchStage.$or = [
+                { name: { $regex: search, $options: "i" } }
+            ]
         }
-        if (active == "true") {
-            matchStage.status = true
+        const booleanFilters = {
+            status: parseBool(active),
+            featured: parseBool(featured),
+        };
+        for (const [key, value] of Object.entries(booleanFilters)) {
+            if (value !== undefined) {
+                matchStage[key] = value;
+            }
         }
-        if (active == "false") {
-            matchStage.status = false
-        }
+
         if (parent) {
             matchStage.parent = new mongoose.Types.ObjectId(parent);
         } else {
             matchStage.parent = null
-
         }
 
         const aggregationPipeline = [
             { $match: matchStage },
-
-            // Lookup createdBy details
             {
                 $lookup: {
                     from: "users",
@@ -148,8 +151,6 @@ const getCategories = async (_req, _res) => {
                     preserveNullAndEmptyArrays: true
                 }
             },
-
-            // Lookup updatedBy details
             {
                 $lookup: {
                     from: "users",

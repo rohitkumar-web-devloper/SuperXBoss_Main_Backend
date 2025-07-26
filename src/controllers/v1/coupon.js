@@ -1,4 +1,4 @@
-const { error, success } = require("../../functions/functions");
+const { error, success, generateRandomCode } = require("../../functions/functions");
 const { CouponModel } = require('../../schemas/coupon')
 const { createCouponSchema, updateCouponSchema } = require('../../Validation/coupon')
 const createCoupon = async (_req, _res) => {
@@ -16,10 +16,15 @@ const createCoupon = async (_req, _res) => {
         if (existingCoupon) {
             return _res.status(409).json(error('Coupon code already exists'));
         }
+        let code = value.code
 
+        if (!value.code) {
+            code = generateRandomCode()
+        }
         // Create new coupon
         const newCoupon = await CouponModel.create({
             ...value,
+            code,
             createdBy: _req.user._id
         });
 
@@ -27,12 +32,13 @@ const createCoupon = async (_req, _res) => {
 
     } catch (err) {
         console.error('Create coupon error:', err);
-        return _res.status(500).json(error('Internal server error'));
+        return _res.status(500).json(error(500, 'Internal server error'));
     }
 };
 
 const updateCoupon = async (_req, _res) => {
     try {
+        const { couponId } = _req.params
         const { error: validationError, value } = updateCouponSchema.validate({ ..._req.body });
         if (validationError) {
             return _res.status(400).json(error(
@@ -41,7 +47,7 @@ const updateCoupon = async (_req, _res) => {
             ));
         }
 
-        const { couponId, ...updateData } = value;
+        const { ...updateData } = value;
 
         // 1. First check if coupon exists
         const existingCoupon = await CouponModel.findById(couponId);
@@ -138,7 +144,7 @@ const getCoupon = async (_req, _res) => {
         return _res.status(200).json(success(result, "Coupon(s) fetched successfully"));
     } catch (err) {
         console.error('Get coupon error:', err);
-        return _res.status(500).json(error('Internal server error'));
+        return _res.status(500).json(error(500, 'Internal server error'));
     }
 };
 

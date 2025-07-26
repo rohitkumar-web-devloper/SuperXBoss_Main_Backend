@@ -1,4 +1,4 @@
-const { error, success } = require("../../functions/functions");
+const { error, success, parseBool } = require("../../functions/functions");
 const { WalletModel } = require("../../schemas/wallet");
 const { createWalletSchema, updateWalletSchema } = require("../../Validation/walletr");
 
@@ -53,11 +53,13 @@ const getWallet = async (_req, _res) => {
         ]
 
     }
-    if (active == "true") {
-        matchStage.status = true
-    }
-    if (active == "false") {
-        matchStage.status = false
+    const booleanFilters = {
+        status: parseBool(active),
+    };
+    for (const [key, value] of Object.entries(booleanFilters)) {
+        if (value !== undefined) {
+            matchStage[key] = value;
+        }
     }
     const aggregationPipeline = [
         {
