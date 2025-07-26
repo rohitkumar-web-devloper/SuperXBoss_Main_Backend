@@ -4,7 +4,8 @@ function success(data, message, pagination) {
         _payload: data,
         type: "success",
         message,
-        pagination: pagination || undefined
+        pagination: pagination || undefined,
+        success: true
     };
 }
 
@@ -13,7 +14,8 @@ function error(statusCode, message, errors = []) {
         _payload_error: errors,
         message,
         statusCode,
-        type: "error"
+        type: "error",
+        success: false
     };
 }
 function info(message, data = null) {

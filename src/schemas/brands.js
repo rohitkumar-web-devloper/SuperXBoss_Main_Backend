@@ -16,7 +16,7 @@ const brandSchema = new mongoose.Schema(
       default: null,
     },
     type: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: 'brand_types',
       required: true,
     },

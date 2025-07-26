@@ -58,7 +58,7 @@ const brandSchema = Joi.object({
   sorting: Joi.number().default(0).messages({
     'number.base': `sorting must be a number`,
   }),
-  status: Joi.boolean().default(true).messages({
+  status: Joi.boolean().default(false).messages({
     'boolean.base': `status must be a boolean`,
   }),
 });
