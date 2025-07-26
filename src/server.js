@@ -10,6 +10,7 @@ const { createBaseRateLimit } = require("./middleware/rate-limit");
 const { router } = require("./routes/index.route");
 const { configureCors } = require("./config/corsConfig");
 const { baseUploadPath } = require("./functions/imageUpload");
+const { cronCoupon } = require("./Helper/CronTabCouponStatus");
 // const { baseUploadPath } = require("./middleware/upload");
 
 const app = express();
@@ -41,3 +42,4 @@ app.listen(PORT, () => {
 
 // Connect DB
 dbConnect();
+cronCoupon()

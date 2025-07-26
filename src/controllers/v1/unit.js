@@ -97,6 +97,36 @@ const getUnits = async (_req, _res) => {
             $facet: {
                 data: [
                     // All transformation above already included
+                    {
+                        $project: {
+                            "createdBy.access_token": 0,
+                            "createdBy.password": 0,
+                            "createdBy.createdAt": 0,
+                            "createdBy.updatedAt": 0,
+                            "createdBy.role": 0,
+                            "createdBy.type": 0,
+                            "createdBy.status": 0,
+                            "createdBy.mobile": 0,
+                            "createdBy.whatsapp": 0,
+                            "createdBy.address": 0,
+                            "createdBy.countryCode": 0,
+                            "createdBy.updatedBy": 0,
+                            "createdBy.parent": 0,
+                            "updatedBy.access_token": 0,
+                            "updatedBy.password": 0,
+                            "updatedBy.createdAt": 0,
+                            "updatedBy.updatedAt": 0,
+                            "updatedBy.role": 0,
+                            "updatedBy.type": 0,
+                            "updatedBy.status": 0,
+                            "updatedBy.mobile": 0,
+                            "updatedBy.whatsapp": 0,
+                            "updatedBy.address": 0,
+                            "updatedBy.countryCode": 0,
+                            "updatedBy.updatedBy": 0,
+                            "updatedBy.parent": 0,
+                        }
+                    },
                 ],
                 totalCount: [
                     { $count: "count" }

@@ -8,6 +8,7 @@ const customerRouter = require('./admin/customer.route');
 const faqRouter = require('./admin/faq.route');
 const productRouter = require('./admin/product.route');
 const ratingRouter = require('./admin/ratingSummery.route');
+const rechargeRouter = require('./admin/recharge.route');
 const unitRouter = require('./admin/unit.route');
 const userRouter = require('./admin/user.route');
 const vehicleRouter = require('./admin/vehicle.route');
@@ -31,6 +32,7 @@ router.use("/customer", customerRouter);
 router.use("/product", authenticateUser, productRouter);
 router.use("/vehicle", authenticateUser, vehicleRouter);
 router.use("/unit", authenticateUser, unitRouter);
+router.use("/recharge", authenticateUser, rechargeRouter);
 
 /* Export the router */
 module.exports = { router }

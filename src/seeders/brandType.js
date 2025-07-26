@@ -1,10 +1,8 @@
-const mongoose = require('mongoose');
 const { BrandTypeModel } = require('../schemas/brandTypes')
 const seedBrandTypes = async () => {
     const data = [
         { name: "Vehicle" },
         { name: "Spare Parts" },
-        { name: "Vehicle + Spare Parts" }
     ];
 
     try {

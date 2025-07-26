@@ -135,9 +135,6 @@ const getCoupon = async (_req, _res) => {
             }
         ]);
 
-        if (!result.length) {
-            return _res.status(404).json(error(400, 'No coupons found'));
-        }
         return _res.status(200).json(success(result, "Coupon(s) fetched successfully"));
     } catch (err) {
         console.error('Get coupon error:', err);

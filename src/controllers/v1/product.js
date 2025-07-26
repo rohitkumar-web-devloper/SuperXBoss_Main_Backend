@@ -227,6 +227,20 @@ const getProducts = async (_req, _res) => {
             },
             {
                 $lookup: {
+                    from: "units",
+                    localField: "unit",
+                    foreignField: "_id",
+                    as: "unit"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$unit",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $lookup: {
                     from: "users",
                     localField: "createdBy",
                     foreignField: "_id",
