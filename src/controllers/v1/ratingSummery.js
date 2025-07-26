@@ -38,7 +38,7 @@ const getRating = async (_req, _res) => {
         const summaries = await RatingSummary.find();
         return _res.status(200).json(success(summaries, "Rating Summaries"));
     } catch (err) {
-        return _res.status(500).json(error(500, error.message));
+        return _res.status(500).json(error(500, err.message));
     }
 }
 

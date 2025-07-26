@@ -97,13 +97,11 @@ const productSchema = new mongoose.Schema({
     type: String,
     trim: true,
   },
-  weight: {
-    type: String,
-    trim: true,
-  },
+
   unit: {
-    type: String,
-    trim: true,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "units",
+    required: true,
   },
   status: {
     type: Boolean,

@@ -32,11 +32,7 @@ const brandSchema = new mongoose.Schema(
       type: [mongoose.Schema.Types.ObjectId],
       ref: 'vehicle_segment_types',
       default: [],
-      required: true, // Optional: only if brand_segment must always be set
-    },
-    sorting: {
-      type: Number,
-      default: 0,
+      required: true,
     },
     status: {
       type: Boolean,
@@ -53,7 +49,7 @@ const brandSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true, // adds createdAt and updatedAt automatically
+    timestamps: true,
   }
 );
 

@@ -15,7 +15,7 @@ const CategorySchema = new mongoose.Schema({
     },
     description: {
         type: String,
-        default: "admin"
+        default: ""
     },
 
     featured: {

@@ -2,12 +2,12 @@ const { error, success } = require("../../functions/functions");
 const { BrandModel } = require("../../schemas/brands");
 const { brandSchema, updateBrandSchema } = require("../../Validation/brand");
 const { imageUpload } = require("../../functions/imageUpload");
+const { BrandCategoriesModel } = require("../../schemas/brands-categories");
 
 const createBrand = async (_req, _res) => {
     try {
         const { _id } = _req.user;
         const { originalname, buffer } = _req.file;
-
 
         const { error: customError, value } = brandSchema.validate(
             { ..._req.body, logo: _req.file },
@@ -19,20 +19,32 @@ const createBrand = async (_req, _res) => {
         const existing = await BrandModel.findOne({
             name: { $regex: `^${value.name}$`, $options: 'i' }
         });
+
         if (existing) {
             return _res.status(409).json(error(400, 'Brand with this name already exists'));
         }
 
-        let file = '';
-        if (buffer && originalname) {
-            file = await imageUpload(originalname, buffer, "brand");
-        }
+        const { name, description, type, brand_day, brand_segment, status, categories } = value
 
         const brand = new BrandModel({
-            ...value,
-            logo: file,
+            name,
+            description,
+            type,
+            brand_day,
+            brand_segment,
+            status,
             createdBy: _id
         });
+        if (buffer && originalname) {
+            brand.logo = await imageUpload(originalname, buffer, "brand");
+        }
+        if (categories && categories?.length) {
+            let data = []
+            categories.forEach((it) => {
+                data.push({ brand_id: brand._id, categories: it })
+            })
+            await BrandCategoriesModel.insertMany(data)
+        }
 
         const saveBrand = await brand.save();
         const { createdAt, updatedAt, ...rest } = saveBrand.toObject();
@@ -77,7 +89,15 @@ const updateBrand = async (_req, _res) => {
             }
             updatedLogo = await imageUpload(_req.file.originalname, _req.file.buffer, 'brand');
         }
-
+        if (value?.categories && value?.categories?.length) {
+            await BrandCategoriesModel.deleteMany({ brand_id: id })
+            let data = []
+            value.categories.forEach((it) => {
+                data.push({ brand_id: id, categories: it })
+            })
+            await BrandCategoriesModel.insertMany(data)
+        }
+        delete value.categories
         const updatedData = {
             ...value,
             logo: updatedLogo,
@@ -96,13 +116,18 @@ const updateBrand = async (_req, _res) => {
 
 const getBrands = async (_req, _res) => {
     try {
-        const { active } = _req.query || {}
+        const { active, pagination = "true", type } = _req.query || {}
+        const usePagination = pagination === "true";
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
         const search = _req.query.search || "";
 
         const matchStage = {};
+        const matchType = {};
+        if (type) {
+            matchType["brand_type.name"] = type?.trim();
+        }
         if (search) {
             matchStage.name = { $regex: search, $options: "i" };
         }
@@ -112,11 +137,10 @@ const getBrands = async (_req, _res) => {
         if (active == "false") {
             matchStage.status = false
         }
-
         const aggregationPipeline = [
             { $match: matchStage },
 
-            // Lookup createdBy details
+            // Lookups for related documents
             {
                 $lookup: {
                     from: "vehicle_segment_types",
@@ -126,11 +150,20 @@ const getBrands = async (_req, _res) => {
                 }
             },
             {
+                $lookup: {
+                    from: "brand_types",
+                    localField: "type",
+                    foreignField: "_id",
+                    as: "brand_type"
+                }
+            },
+            {
                 $unwind: {
-                    path: "$brand_segment",
+                    path: "$brand_type",
                     preserveNullAndEmptyArrays: true
                 }
             },
+
             {
                 $lookup: {
                     from: "users",
@@ -145,8 +178,6 @@ const getBrands = async (_req, _res) => {
                     preserveNullAndEmptyArrays: true
                 }
             },
-
-            // Lookup updatedBy details
             {
                 $lookup: {
                     from: "users",
@@ -161,6 +192,8 @@ const getBrands = async (_req, _res) => {
                     preserveNullAndEmptyArrays: true
                 }
             },
+
+            // Project sensitive user fields out
             {
                 $project: {
                     "createdBy.access_token": 0,
@@ -176,35 +209,79 @@ const getBrands = async (_req, _res) => {
                     "updatedBy.updatedAt": 0,
                     "updatedBy.role": 0,
                     "updatedBy.type": 0,
-                    "updatedBy.status": 0,
-
+                    "updatedBy.status": 0
                 }
             },
-            // Sorting and pagination
-            { $sort: { sorting: 1 } },
+
+            // Lookup brand categories
+            {
+                $lookup: {
+                    from: "brands_categories",
+                    localField: "_id",
+                    foreignField: "brand_id",
+                    as: "brand_categories"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$brand_categories",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            // Lookup categories
+            {
+                $lookup: {
+                    from: "categories",
+                    localField: "brand_categories.categories",
+                    foreignField: "_id",
+                    as: "categories"
+                }
+            },
+
+            // Final grouping to deduplicate and collect required fields
+            {
+                $group: {
+                    _id: "$_id",
+                    name: { $first: "$name" },
+                    logo: { $first: "$logo" },
+                    description: { $first: "$description" },
+                    type: { $first: "$type" },
+                    brand_day: { $first: "$brand_day" },
+                    brand_day_offer: { $first: "$brand_day_offer" },
+                    brand_segment: { $first: "$brand_segment" },
+                    sorting: { $first: "$sorting" },
+                    status: { $first: "$status" },
+                    updatedAt: { $first: "$updatedAt" },
+                    createdAt: { $first: "$createdAt" },
+                    updatedBy: { $first: "$updatedBy" },
+                    createdBy: { $first: "$createdBy" },
+                    brand_type: { $first: "$brand_type" },
+                    categories: { $push: "$categories" }
+                }
+            },
+            {
+                $match: matchType
+            },
+            {
+                $addFields: {
+                    categories: {
+                        $reduce: {
+                            input: "$categories",
+                            initialValue: [],
+                            in: { $setUnion: ["$$value", "$$this"] }
+                        }
+                    }
+                }
+            },
+
+            // Pagination and sorting
+            { $sort: { createdAt: -1 } },
+            ...(usePagination ? [{ $skip: skip }, { $limit: limit }] : []),
+
             {
                 $facet: {
                     data: [
-                        {
-                            $group: {
-                                _id: "$_id",
-                                name: { $first: "$name" },
-                                logo: { $first: "$logo" },
-                                description: { $first: "$description" },
-                                type: { $first: "$type" },
-                                brand_day: { $first: "$brand_day" },
-                                brand_day_offer: { $first: "$brand_day_offer" },
-                                brand_segment: { $push: "$brand_segment" },
-                                sorting: { $first: "$sorting" },
-                                status: { $first: "$status" },
-                                updatedAt: { $first: "$updatedAt" },
-                                createdAt: { $first: "$createdAt" },
-                                updatedBy: { $first: "$updatedBy" },
-                                createdBy: { $first: "$createdBy" },
-                            }
-                        },
-                        { $skip: skip },
-                        { $limit: limit },
+                        // All transformation above already included
                     ],
                     totalCount: [
                         { $count: "count" }
@@ -213,20 +290,20 @@ const getBrands = async (_req, _res) => {
             }
         ];
 
-
         const result = await BrandModel.aggregate(aggregationPipeline);
 
         const brands = result[0].data;
+
         const total = result[0].totalCount[0]?.count || 0;
 
         return _res.status(200).json(
             success(brands, "Brands fetched successfully",
                 {
                     total,
-                    page,
-                    limit,
-                    totalPages: Math.ceil(total / limit),
-                },
+                    page: usePagination ? page : 1,
+                    limit: usePagination ? limit : total,
+                    totalPages: usePagination ? Math.ceil(total / limit) : 1,
+                }
 
             )
         );

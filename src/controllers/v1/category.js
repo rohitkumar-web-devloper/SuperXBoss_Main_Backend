@@ -104,7 +104,8 @@ const updateCategory = async (_req, _res) => {
 };
 const getCategories = async (_req, _res) => {
     try {
-        const { parent, active } = _req.query || {}
+        const { parent, active, pagination = "true" } = _req.query || {}
+        const usePagination = pagination === "true";
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
@@ -195,8 +196,7 @@ const getCategories = async (_req, _res) => {
                 $facet: {
                     data: [
                         { $sort: { createdAt: -1 } },
-                        { $skip: skip },
-                        { $limit: limit },
+                        ...(usePagination ? [{ $skip: skip }, { $limit: limit }] : [])
                     ],
                     totalCount: [
                         { $count: "count" }
@@ -214,10 +214,11 @@ const getCategories = async (_req, _res) => {
             category, "Success",
             {
                 total,
-                page,
-                limit,
-                totalPages: Math.ceil(total / limit),
-            }));
+                page: usePagination ? page : 1,
+                limit: usePagination ? limit : total,
+                totalPages: usePagination ? Math.ceil(total / limit) : 1,
+            }
+        ));
 
 
     } catch (error) {
