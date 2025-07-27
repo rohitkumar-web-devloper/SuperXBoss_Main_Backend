@@ -157,12 +157,11 @@ const getProducts = async (_req, _res) => {
             new_arrival: parseBool(new_arrival),
         };
         if (segment && segment.length) {
-            booleanFilters = {
-                ...booleanFilters,
-                segment_type: { $in: segment.map((id) => new mongoose.Types.ObjectId(id)) }
-            }
-
+            booleanFilters.segment_type = {
+                $in: segment.map(id => new mongoose.Types.ObjectId(id)),
+            };
         }
+
         for (const [key, value] of Object.entries(booleanFilters)) {
             if (value !== undefined) {
                 matchStage[key] = value;
