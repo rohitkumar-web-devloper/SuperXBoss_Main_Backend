@@ -158,7 +158,7 @@ const getProducts = async (_req, _res) => {
         };
         if (segment && segment.length) {
             booleanFilters.segment_type = {
-                $in: segment.map(id => new mongoose.Types.ObjectId(id)),
+                $in: typeof segment == "string" ? [new mongoose.Types.ObjectId(segment)] : segment.map(id => new mongoose.Types.ObjectId(id)),
             };
         }
 
