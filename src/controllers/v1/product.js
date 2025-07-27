@@ -4,8 +4,8 @@ const { imageUpload } = require("../../functions/imageUpload");
 const unlinkOldFile = require("../../functions/unlinkFile");
 const { ProductModel } = require("../../schemas/product");
 const { productJoiSchema } = require("../../Validation/product");
+const { VehicleProductModel } = require("../../schemas/vehicle-products");
 const createProduct = async (_req, _res) => {
-
     try {
         if (!_req?.body) {
             return _res.status(400).json(error(400, "Product Body is required."));
@@ -40,7 +40,11 @@ const createProduct = async (_req, _res) => {
         if (video && video?.originalname && video?.buffer) {
             video = await imageUpload(video.originalname, video.buffer, 'product_video')
         }
-
+        const any_offer = value.any_discount || 0;
+        const discount_customer_price = value.customer_price;
+        const discount_b2b_price = value.b2b_price;
+        const final_customer_price = discount_customer_price - (discount_customer_price * any_offer / 100);
+        const final_b2b_price = discount_b2b_price - (discount_b2b_price * any_offer / 100);
         const payload = {
             ...value,
             bulk_discount: value.bulk_discount ? JSON.parse(value.bulk_discount) : [],
@@ -48,10 +52,171 @@ const createProduct = async (_req, _res) => {
             video: video,
             createdBy: _req.user._id,
             user: _req.user._id,
+            discount_customer_price: final_customer_price,
+            discount_b2b_price: final_b2b_price
         };
         const product = new ProductModel(payload);
         await product.save()
         return _res.json(success(product, "Product Created Successfully."))
+    } catch (err) {
+        console.log(err);
+        return _res.status(500).json(error(500, err.message));
+    }
+}
+const createVehicleProduct = async (_req, _res) => {
+    try {
+        if (!_req?.body) {
+            return _res.status(400).json(error(400, "Body is required."));
+        }
+        const { assign_data, product_id } = _req.body;
+        if (!assign_data) {
+            return _res.status(400).json(error(400, "Assign data is required."));
+        }
+        const responses = [];
+        for (const [brand_id, data] of Object.entries(assign_data)) {
+            const existing = await VehicleProductModel.findOne({ product_id, brand_id });
+            if (existing) {
+                existing.vehicle_ids = data.vehicles;
+                existing.status = data.status;
+                await existing.save();
+                responses.push({ action: 'updated', product_id, brand_id, vehicle_ids: data?.vehicles, status: data?.data });
+            } else {
+                const newDoc = new VehicleProductModel({ product_id, brand_id, vehicle_ids: data?.vehicles, status: data?.data });
+                await newDoc.save();
+                responses.push({ action: 'created', product_id, brand_id, vehicle_ids: data?.vehicles, status: data?.data });
+            }
+        }
+
+        return _res.json(success(responses, "Vehicle product(s) processed successfully."));
+    } catch (err) {
+        console.error(err);
+        return _res.status(500).json(error(500, err.message));
+    }
+};
+
+const getVehicleProduct = async (_req, _res) => {
+    try {
+        const { product_id } = _req?.params
+
+        if (!product_id) {
+            return _res.status(400).json(error(400, "Product id is required."));
+        }
+
+        let result;
+        const product = await VehicleProductModel.aggregate([
+            { $match: { product_id: new mongoose.Types.ObjectId(product_id) } },
+        ])
+
+        result = product.reduce((acc, curr) => {
+            acc[curr.brand_id] = { vehicles: curr.vehicle_ids, status: curr.status };
+            return acc;
+        }, {});
+
+        return _res.json(success(result, "Product fetch Successfully."))
+    } catch (err) {
+        console.log(err);
+        return _res.status(500).json(error(500, err.message));
+    }
+}
+const getVehicleAssignProduct = async (_req, _res) => {
+    try {
+        const page = parseInt(_req.query.page) || 1;
+        const limit = parseInt(_req.query.page_size) || 15;
+        const skip = (page - 1) * limit;
+        const { vehicle = "", brand_id, start_year, end_year } = _req?.query
+        let vehicleIds = [];
+        if (vehicle) {
+            const parts = vehicle.split(",");
+            vehicleIds = parts
+                .filter(id => mongoose.Types.ObjectId.isValid(id))
+                .map(id => new mongoose.Types.ObjectId(id));
+        }
+        const matchStage = {};
+        if (vehicleIds.length > 0) {
+            matchStage.vehicle_ids = { $in: vehicleIds };
+        }
+        if (brand_id) {
+            matchStage.brand_id = new mongoose.Types.ObjectId(brand_id);
+        }
+        matchStage.status = true
+
+        const product = await VehicleProductModel.aggregate([
+            {
+                $lookup: {
+                    from: "vehicles",
+                    localField: "vehicle_ids",
+                    foreignField: "_id",
+                    as: "vehicle_data"
+                }
+            },
+            ...(start_year && end_year
+                ? [
+                    {
+                        $addFields: {
+                            vehicle_data: {
+                                $filter: {
+                                    input: "$vehicle_data",
+                                    as: "vehicle",
+                                    cond: {
+                                        $and: [
+                                            { $lte: ["$$vehicle.start_year", parseInt(end_year)] },
+                                            { $gte: ["$$vehicle.end_year", parseInt(start_year)] }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+                : []),
+            {
+                $match: matchStage
+            },
+            {
+                $lookup: {
+                    from: "products",
+                    localField: "product_id",
+                    foreignField: "_id",
+                    as: "product"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$product",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+
+            { $skip: skip },
+            { $limit: limit },
+            {
+                $facet: {
+                    data: [
+                        // All transformation above already included
+                    ],
+                    totalCount: [
+                        { $count: "count" }
+                    ]
+                }
+            }
+        ])
+        const total = product[0].totalCount[0]?.count || 0;
+        let onlyProducts = product[0].data;
+        // console.log(onlyProducts);
+
+        // onlyProducts = onlyProducts.map((it) => it.product)
+        return _res.status(200).json(
+            success(onlyProducts, "Product fetch Successfully.",
+                {
+                    total,
+                    page: page,
+                    limit: limit,
+                    totalPages: Math.ceil(total / limit),
+                }
+
+            )
+        );
+
     } catch (err) {
         console.log(err);
         return _res.status(500).json(error(500, err.message));
@@ -91,6 +256,12 @@ const updateProduct = async (_req, _res) => {
                 unlinkOldFile(imgPath);
                 updatedImages = updatedImages.filter(p => p !== imgPath);
             });
+        } else {
+            if (value.removed_images) {
+                unlinkOldFile(value.removed_images);
+                updatedImages = updatedImages.filter(p => p !== value.removed_images);
+            }
+
         }
         delete value.removed_images;
 
@@ -111,13 +282,19 @@ const updateProduct = async (_req, _res) => {
             if (videoPath) unlinkOldFile(videoPath);
         }
         delete value?.videoRemove
-
+        const any_offer = value.any_discount || 0;
+        const discount_customer_price = value.customer_price;
+        const discount_b2b_price = value.b2b_price;
+        const final_customer_price = discount_customer_price - (discount_customer_price * any_offer / 100);
+        const final_b2b_price = discount_b2b_price - (discount_b2b_price * any_offer / 100);
         const payload = {
             ...value,
             images: updatedImages,
             video: videoPath,
             updatedBy: _req.user._id,
             bulk_discount: value.bulk_discount ? JSON.parse(value.bulk_discount) : [],
+            discount_customer_price: final_customer_price,
+            discount_b2b_price: final_b2b_price
         };
         const updated = await ProductModel.findByIdAndUpdate(productId, payload, {
             new: true,
@@ -131,7 +308,7 @@ const updateProduct = async (_req, _res) => {
 }
 const getProducts = async (_req, _res) => {
     try {
-        const { active, pagination, trend_part, wish_product, pop_item, new_arrival, search = "", segment = [] } = _req.query || {};
+        const { active, pagination, trend_part, wish_product, pop_item, new_arrival, search = "", segment = "" } = _req.query || {};
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
@@ -156,9 +333,11 @@ const getProducts = async (_req, _res) => {
             pop_item: parseBool(pop_item),
             new_arrival: parseBool(new_arrival),
         };
-        if (segment && segment.length) {
+
+        const segment_data = segment ? segment.split(",") : ""
+        if (segment_data && segment_data.length) {
             booleanFilters.segment_type = {
-                $in: typeof segment == "string" ? [new mongoose.Types.ObjectId(segment)] : segment.map(id => new mongoose.Types.ObjectId(id)),
+                $in: typeof segment_data == "string" ? [new mongoose.Types.ObjectId(segment_data)] : segment_data.map(id => new mongoose.Types.ObjectId(id)),
             };
         }
 
@@ -175,6 +354,8 @@ const getProducts = async (_req, _res) => {
                     name: { $first: "$name" },
                     video: { $first: "$video" },
                     b2b_price: { $first: "$b2b_price" },
+                    discount_b2b_price: { $first: "$discount_b2b_price" },
+                    discount_customer_price: { $first: "$discount_customer_price" },
                     point: { $first: "$point" },
                     new_arrival: { $first: "$new_arrival" },
                     pop_item: { $first: "$pop_item" },
@@ -336,6 +517,7 @@ const getProducts = async (_req, _res) => {
         ];
 
         const result = await ProductModel.aggregate(aggregationPipeline);
+
         const product = result[0].data;
         const total = result[0].totalCount[0]?.count || product.length;
 
@@ -505,156 +687,5 @@ const getProductsById = async (_req, _res) => {
     }
 }
 
-const getProductsByFilters = async (_req, _res) => {
-    try {
-        const { segment_id } = _req.params
 
-        const aggregationPipeline = [
-            { $match: { segment_type: { $in: [new mongoose.Types.ObjectId(segment_id)] } } },
-            {
-                $lookup: {
-                    from: "vehicle_segment_types",
-                    localField: "segment_type",
-                    foreignField: "_id",
-                    as: "segment_type"
-                }
-            },
-            {
-                $unwind: {
-                    path: "$segment_type",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $lookup: {
-                    from: "brands",
-                    localField: "brand_id",
-                    foreignField: "_id",
-                    as: "brand"
-                }
-            },
-            {
-                $unwind: {
-                    path: "$brand",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "createdBy",
-                    foreignField: "_id",
-                    as: "createdBy"
-                }
-            },
-            {
-                $unwind: {
-                    path: "$createdBy",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $lookup: {
-                    from: "users",
-                    localField: "updatedBy",
-                    foreignField: "_id",
-                    as: "updatedBy"
-                }
-            },
-            {
-                $unwind: {
-                    path: "$updatedBy",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $project: {
-                    "createdBy.access_token": 0,
-                    "createdBy.password": 0,
-                    "createdBy.createdAt": 0,
-                    "createdBy.updatedAt": 0,
-                    "createdBy.role": 0,
-                    "createdBy.type": 0,
-                    "createdBy.status": 0,
-                    "createdBy.mobile": 0,
-                    "createdBy.whatsapp": 0,
-                    "createdBy.address": 0,
-                    "createdBy.countryCode": 0,
-                    "createdBy.updatedBy": 0,
-                    "createdBy.parent": 0,
-                    "updatedBy.access_token": 0,
-                    "updatedBy.password": 0,
-                    "updatedBy.createdAt": 0,
-                    "updatedBy.updatedAt": 0,
-                    "updatedBy.role": 0,
-                    "updatedBy.type": 0,
-                    "updatedBy.status": 0,
-                    "updatedBy.mobile": 0,
-                    "updatedBy.whatsapp": 0,
-                    "updatedBy.address": 0,
-                    "updatedBy.countryCode": 0,
-                    "updatedBy.updatedBy": 0,
-                    "updatedBy.parent": 0,
-                    "bulk_discount._id": 0,
-                    "brand.brand_segment": 0,
-                    "brand.brand_day_offer": 0,
-                    "brand.brand_day": 0,
-                    "brand.type": 0,
-                    "brand.description": 0,
-                    "brand.sorting": 0,
-
-                }
-            },
-            {
-                $facet: {
-                    data: [
-                        {
-                            $group: {
-                                _id: "$_id",
-                                name: { $first: "$name" },
-                                video: { $first: "$video" },
-                                b2b_price: { $first: "$b2b_price" },
-                                point: { $first: "$point" },
-                                new_arrival: { $first: "$new_arrival" },
-                                pop_item: { $first: "$pop_item" },
-                                part_no: { $first: "$part_no" },
-                                customer_price: { $first: "$customer_price" },
-                                min_qty: { $first: "$min_qty" },
-                                wish_product: { $first: "$wish_product" },
-                                any_discount: { $first: "$any_discount" },
-                                item_stock: { $first: "$item_stock" },
-                                sku_id: { $first: "$sku_id" },
-                                tax: { $first: "$tax" },
-                                hsn_code: { $first: "$hsn_code" },
-                                ship_days: { $first: "$ship_days" },
-                                return_days: { $first: "$return_days" },
-                                weight: { $first: "$weight" },
-                                unit: { $first: "$unit" },
-                                status: { $first: "$status" },
-                                trend_part: { $first: "$trend_part" },
-                                brand: { $first: "$brand" },
-                                images: { $first: "$images" },
-                                bulk_discount: { $first: "$bulk_discount" },
-                                updatedAt: { $first: "$updatedAt" },
-                                createdAt: { $first: "$createdAt" },
-                                updatedBy: { $first: "$updatedBy" },
-                                createdBy: { $first: "$createdBy" },
-                                return_policy: { $first: "$return_policy" },
-                                segment_type: { $push: "$segment_type" },
-                            }
-                        },
-                    ],
-                }
-            }
-        ]
-        const result = await ProductModel.aggregate(aggregationPipeline);
-        const product = result[0].data[0];
-
-        return _res.status(200).json(success(product, "Success"));
-    } catch (err) {
-        console.log(err);
-        return _res.status(500).json(error(500, err.message));
-    }
-}
-
-module.exports = { createProduct, updateProduct, getProducts, getProductsById, getProductsByFilters }
+module.exports = { createProduct, updateProduct, getProducts, getProductsById, createVehicleProduct, getVehicleProduct, getVehicleAssignProduct }

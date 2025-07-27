@@ -29,7 +29,10 @@ const productJoiSchema = Joi.object({
             'array.base': `"segment_type" must be an array`,
             'any.required': `"segment_type" is required`,
         }),
-    removed_images: Joi.array().items(Joi.string()).optional(),
+    removed_images: Joi.alternatives().try(
+        Joi.string(),
+        Joi.array().items(Joi.string())
+    ).optional(),
     min_qty: Joi.number().min(1).optional(),
     wish_product: Joi.boolean().optional(),
     any_discount: Joi.number().min(0).max(100).optional(),

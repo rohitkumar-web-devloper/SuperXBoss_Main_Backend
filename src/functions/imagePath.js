@@ -12,6 +12,8 @@ const imagePath = (folder, media) => {
 
   // Return the full image URL
   const src = `${process.env.BASE_URL_UPLOAD}/${folder}/${media}`;
+  console.log(src, "src");
+
   return src;
 };
 

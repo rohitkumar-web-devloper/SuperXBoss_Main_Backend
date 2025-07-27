@@ -3,7 +3,7 @@ const multer = require('multer');
 const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|mp4|mov|avi|mkv/;
+    const allowedTypes = /png|gif|mp4|mov|avi|mkv/;
     const extname = allowedTypes.test(require('path').extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype.toLowerCase());
 

@@ -317,7 +317,101 @@ const getBrands = async (_req, _res) => {
         return _res.status(500).json({ success: false, message: error.message });
     }
 };
+const getBrandsWithVehicle = async (_req, _res) => {
+    try {
+        const { active, pagination = "true", type } = _req.query || {}
+        const usePagination = pagination === "true";
+        const page = parseInt(_req.query.page) || 1;
+        const limit = parseInt(_req.query.page_size) || 15;
+        const skip = (page - 1) * limit;
+        const search = _req.query.search || "";
 
+        const matchStage = {};
+        const matchType = {};
+
+        if (type) {
+            matchType["brand_type.name"] = type?.trim();
+        }
+        if (search) {
+            matchStage.name = { $regex: search, $options: "i" };
+        }
+
+        const booleanFilters = {
+            status: parseBool(active),
+        };
+        for (const [key, value] of Object.entries(booleanFilters)) {
+            if (value !== undefined) {
+                matchStage[key] = value;
+            }
+        }
+
+        const aggregationPipeline = [
+            { $match: matchStage },
+
+            {
+                $lookup: {
+                    from: "brand_types",
+                    localField: "type",
+                    foreignField: "_id",
+                    as: "brand_type"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$brand_type",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $lookup: {
+                    from: "vehicles",
+                    localField: "_id",
+                    foreignField: "brand_id",
+                    as: "vehicles"
+                }
+            },
+            {
+                $match: matchType
+            },
+            // Pagination and sorting
+            { $sort: { createdAt: -1 } },
+            ...(usePagination ? [{ $skip: skip }, { $limit: limit }] : []),
+
+            {
+                $facet: {
+                    data: [
+                        // All transformation above already included
+                    ],
+                    totalCount: [
+                        { $count: "count" }
+                    ]
+                }
+            }
+        ];
+
+
+        const result = await BrandModel.aggregate(aggregationPipeline);
+
+        const brands = result[0].data;
+
+        const total = result[0].totalCount[0]?.count || 0;
+
+        return _res.status(200).json(
+            success(brands, "Brands fetched successfully",
+                {
+                    total,
+                    page: usePagination ? page : 1,
+                    limit: usePagination ? limit : total,
+                    totalPages: usePagination ? Math.ceil(total / limit) : 1,
+                }
+
+            )
+        );
+
+    } catch (error) {
+        return _res.status(500).json({ success: false, message: error.message });
+    }
+};
 const getActiveBrands = async (_req, _res) => {
     try {
         const result = await BrandModel.find({ status: true }).select({ createdAt: 0, updatedAt: 0, brand_segment: 0, brand_day_offer: 0, sorting: 0 });
@@ -330,4 +424,4 @@ const getActiveBrands = async (_req, _res) => {
 };
 
 
-module.exports = { createBrand, updateBrand, getBrands, getActiveBrands }
+module.exports = { createBrand, updateBrand, getBrands, getActiveBrands, getBrandsWithVehicle }

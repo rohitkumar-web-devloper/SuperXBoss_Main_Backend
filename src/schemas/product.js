@@ -21,6 +21,16 @@ const productSchema = new mongoose.Schema({
     required: true,
     min: 0,
   },
+  discount_customer_price: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  discount_b2b_price: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
   point: {
     type: Number,
     min: 0,
@@ -151,5 +161,5 @@ function arrayLimit(val) {
 }
 
 module.exports = {
-  ProductModel: mongoose.model('Product', productSchema),
+  ProductModel: mongoose.model('products', productSchema),
 };

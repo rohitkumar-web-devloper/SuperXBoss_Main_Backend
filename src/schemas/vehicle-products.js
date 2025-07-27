@@ -1,0 +1,39 @@
+const mongoose = require('mongoose');
+
+const VehicleProductSchema = new mongoose.Schema(
+    {
+        product_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'products',
+            required: true
+        },
+        brand_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'brands',
+            required: true
+        },
+        vehicle_ids: {
+            type: [mongoose.Schema.Types.ObjectId],
+            ref: 'vehicles',
+            required: true
+        },
+        status: {
+            type: Boolean,
+            default: true,
+        },
+        createdBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'users',
+        },
+        updatedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'users',
+        },
+    },
+    {
+        timestamps: true, // adds createdAt and updatedAt automatically
+    }
+);
+
+const VehicleProductModel = mongoose.model('vehicle-products', VehicleProductSchema);
+module.exports = { VehicleProductModel };
