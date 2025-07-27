@@ -131,7 +131,7 @@ const updateProduct = async (_req, _res) => {
 }
 const getProducts = async (_req, _res) => {
     try {
-        const { active, pagination, trend_part, wish_product, pop_item, new_arrival, search = "" } = _req.query || {};
+        const { active, pagination, trend_part, wish_product, pop_item, new_arrival, search = "", segment = [] } = _req.query || {};
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
@@ -149,13 +149,20 @@ const getProducts = async (_req, _res) => {
             ];
         }
 
-        const booleanFilters = {
+        let booleanFilters = {
             status: parseBool(active),
             trend_part: parseBool(trend_part),
             wish_product: parseBool(wish_product),
             pop_item: parseBool(pop_item),
-            new_arrival: parseBool(new_arrival)
+            new_arrival: parseBool(new_arrival),
         };
+        if (segment && segment.length) {
+            booleanFilters = {
+                ...booleanFilters,
+                segment_type: { $in: segment.map((id) => new mongoose.Types.ObjectId(id)) }
+            }
+
+        }
         for (const [key, value] of Object.entries(booleanFilters)) {
             if (value !== undefined) {
                 matchStage[key] = value;
@@ -499,7 +506,7 @@ const getProductsById = async (_req, _res) => {
     }
 }
 
-const getProductsBySegment = async (_req, _res) => {
+const getProductsByFilters = async (_req, _res) => {
     try {
         const { segment_id } = _req.params
 
@@ -651,4 +658,4 @@ const getProductsBySegment = async (_req, _res) => {
     }
 }
 
-module.exports = { createProduct, updateProduct, getProducts, getProductsById, getProductsBySegment }
+module.exports = { createProduct, updateProduct, getProducts, getProductsById, getProductsByFilters }

@@ -90,6 +90,7 @@ const updateVehicleSegmentType = async (_req, _res) => {
 
 const getVehicleSegmentTypes = async (_req, res) => {
     try {
+
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
