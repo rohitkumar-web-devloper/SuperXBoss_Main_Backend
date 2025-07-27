@@ -18,6 +18,14 @@ const vehicleSchema = new mongoose.Schema(
             type: Boolean,
             default: true
         },
+        start_year: {
+            type: Number,
+            required: true
+        },
+        end_year: {
+            type: Number,
+            required: true
+        },
         brand_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'brands',

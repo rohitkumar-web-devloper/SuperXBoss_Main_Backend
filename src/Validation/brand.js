@@ -15,11 +15,6 @@ const brandSchema = Joi.object({
     'string.base': `name must be a string`,
     'any.required': `name is required`,
   }),
-  logo: Joi.object().min(1).required().messages({
-    'object.base': 'logo must be an object',
-    'object.min': 'logo must contain at least one key',
-    'any.required': 'logo is required',
-  }),
   description: Joi.string().allow(null, '').messages({
     'string.base': `description must be a string`,
   }),

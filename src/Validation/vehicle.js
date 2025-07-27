@@ -9,6 +9,8 @@ const vehicleValidationSchema = Joi.object({
     description: Joi.string().allow(null, '').optional(),
     picture: Joi.string().uri().allow(null, '').optional(),
     status: Joi.boolean().optional(),
+    start_year: Joi.number().required(),
+    end_year: Joi.number().required(),
     createdBy: Joi.string()
         .custom((value, helpers) => {
             if (!mongoose.Types.ObjectId.isValid(value)) {
@@ -37,6 +39,8 @@ const vehicleValidationUpdateSchema = Joi.object({
         'string.empty': 'Name is required',
     }),
     description: Joi.string().allow(null, '').optional(),
+    start_year: Joi.number().required(),
+    end_year: Joi.number().required(),
     picture: Joi.string().uri().allow(null, '').optional(),
     status: Joi.boolean().optional(),
     createdBy: Joi.string()

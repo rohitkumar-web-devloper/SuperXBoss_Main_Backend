@@ -151,20 +151,7 @@ const getBrands = async (_req, _res) => {
                     as: "brand_segment"
                 }
             },
-            {
-                $lookup: {
-                    from: "brand_types",
-                    localField: "type",
-                    foreignField: "_id",
-                    as: "brand_type"
-                }
-            },
-            {
-                $unwind: {
-                    path: "$brand_type",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
+
 
             {
                 $lookup: {
@@ -242,6 +229,20 @@ const getBrands = async (_req, _res) => {
 
             // Final grouping to deduplicate and collect required fields
             {
+                $lookup: {
+                    from: "brand_types",
+                    localField: "type",
+                    foreignField: "_id",
+                    as: "brand_type"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$brand_type",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
                 $group: {
                     _id: "$_id",
                     name: { $first: "$name" },
@@ -261,6 +262,7 @@ const getBrands = async (_req, _res) => {
                     categories: { $push: "$categories" }
                 }
             },
+
             {
                 $match: matchType
             },
@@ -291,6 +293,7 @@ const getBrands = async (_req, _res) => {
                 }
             }
         ];
+
 
         const result = await BrandModel.aggregate(aggregationPipeline);
 

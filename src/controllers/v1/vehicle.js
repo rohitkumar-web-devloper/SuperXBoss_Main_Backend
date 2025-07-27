@@ -20,7 +20,7 @@ const createVehicle = async (_req, _res) => {
         if (customError) {
             return _res.status(400).json(error(400, customError.details.map(err => err.message)[0]));
         }
-        const { name, description, status } = _req.body
+        const { name, description, status, start_year, end_year } = _req.body
         const { brand_id } = _req.params
         const brand = await BrandModel.aggregate([
             { $match: { _id: new mongoose.Types.ObjectId(brand_id) } },
@@ -52,6 +52,8 @@ const createVehicle = async (_req, _res) => {
             description,
             status,
             brand_id,
+            start_year,
+            end_year,
             createdBy: _id
         })
         if (buffer && originalname) {
@@ -78,7 +80,7 @@ const updateVehicle = async (_req, _res) => {
         if (customError) {
             return _res.status(400).json(error(400, customError.details.map(err => err.message)[0]));
         }
-        const { name, description, status } = _req.body
+        const { name, description, status, start_year, end_year } = _req.body
         const vehicle = await VehicleModel.findById(vehicle_id);
 
         if (!vehicle) {
@@ -98,6 +100,8 @@ const updateVehicle = async (_req, _res) => {
             name,
             description,
             status,
+            start_year,
+            end_year,
             updatedBy: _id
         };
         if (buffer && originalname) {
@@ -128,7 +132,12 @@ const getVehicle = async (_req, _res) => {
         const search = _req.query.search || "";
         const matchStage = {};
         if (search) {
-            matchStage.name = { $regex: search, $options: "i" };
+            matchStage.$or = [
+                { startYear: { $regex: search, $options: "i" } },
+                { endYear: { $regex: search, $options: "i" } },
+                { name: { $regex: search, $options: "i" } }
+            ]
+
         }
         const booleanFilters = {
             status: parseBool(active),
@@ -141,8 +150,13 @@ const getVehicle = async (_req, _res) => {
                 matchStage[key] = value;
             }
         }
-
         const aggregationPipeline = [
+            {
+                $addFields: {
+                    startYear: { $toString: "$start_year" },
+                    endYear: { $toString: "$end_year" }
+                }
+            },
             { $match: matchStage },
 
             {

@@ -2,7 +2,7 @@ const express = require("express");
 const productRouter = express.Router();
 const { asyncHandler } = require("../../middleware/error-handler");
 const { upload } = require("../../middleware/upload");
-const { createProduct, updateProduct, getProducts, getProductsById } = require("../../controllers/v1/product");
+const { createProduct, updateProduct, getProducts, getProductsById, getProductsBySegment } = require("../../controllers/v1/product");
 
 productRouter.post('/',
     upload.fields([
@@ -20,4 +20,6 @@ productRouter.get('/',
     asyncHandler(getProducts));
 productRouter.get('/:productId',
     asyncHandler(getProductsById));
+productRouter.get('/segment/:segment_id',
+    asyncHandler(getProductsBySegment));
 module.exports = productRouter;
