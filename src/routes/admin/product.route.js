@@ -2,7 +2,7 @@ const express = require("express");
 const productRouter = express.Router();
 const { asyncHandler } = require("../../middleware/error-handler");
 const { upload } = require("../../middleware/upload");
-const { createProduct, updateProduct, getProducts, getProductsById, createVehicleProduct, getVehicleProduct, getVehicleAssignProduct } = require("../../controllers/v1/product");
+const { createProduct, updateProduct, getProducts, getProductsById, createVehicleProduct, getVehicleProduct, getVehicleAssignProduct, getVehicleAssignProductWithYear } = require("../../controllers/v1/product");
 
 productRouter.post('/',
     upload.fields([
@@ -14,8 +14,8 @@ productRouter.post('/vehicle-assign',
     asyncHandler(createVehicleProduct));
 productRouter.get('/vehicle-assign/:product_id',
     asyncHandler(getVehicleProduct));
-productRouter.get('/vehicle-assign-products',
-    asyncHandler(getVehicleAssignProduct));
+productRouter.get('/vehicle-assign-products', asyncHandler(getVehicleAssignProduct));
+productRouter.get('/vehicle-assign-products-years', asyncHandler(getVehicleAssignProductWithYear));
 productRouter.put('/:productId',
     upload.fields([
         { name: 'images', maxCount: 5 },

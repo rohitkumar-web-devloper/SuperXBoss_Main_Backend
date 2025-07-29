@@ -16,6 +16,7 @@ const vehicleSegmentType = require('./admin/vehicleSegmentType.route');
 
 /* Packages */
 const express = require("express");
+const WishListRouter = require('./admin/wish-list.route');
 const router = express.Router();
 
 /* Routes */
@@ -33,6 +34,7 @@ router.use("/product", authenticateUser, productRouter);
 router.use("/vehicle", authenticateUser, vehicleRouter);
 router.use("/unit", authenticateUser, unitRouter);
 router.use("/recharge", authenticateUser, rechargeRouter);
+router.use("/wish-list", authenticateUser, WishListRouter);
 
 /* Export the router */
 module.exports = { router }

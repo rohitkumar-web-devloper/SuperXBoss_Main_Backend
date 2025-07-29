@@ -81,11 +81,12 @@ const updateBrand = async (_req, _res) => {
         }
 
         let updatedLogo = brand.logo;
-        if (_req.file && _req.file.buffer) {
+        const { originalname, buffer } = _req?.file || {};
+        if (_req.file && buffer) {
             if (brand.logo) {
                 unlinkOldFile(brand.logo);
             }
-            updatedLogo = await imageUpload(_req.file.originalname, _req.file.buffer, 'brand');
+            updatedLogo = await imageUpload(originalname, buffer, 'brand');
         }
         if (value?.categories && value?.categories?.length) {
             await BrandCategoriesModel.deleteMany({ brand_id: id })

@@ -93,7 +93,6 @@ const createVehicleProduct = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 };
-
 const getVehicleProduct = async (_req, _res) => {
     try {
         const { product_id } = _req?.params
@@ -123,7 +122,7 @@ const getVehicleAssignProduct = async (_req, _res) => {
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
-        const { vehicle = "", brand_id, start_year, end_year } = _req?.query
+        const { vehicle = "", brand_id, } = _req?.query
         let vehicleIds = [];
         if (vehicle) {
             const parts = vehicle.split(",");
@@ -149,26 +148,6 @@ const getVehicleAssignProduct = async (_req, _res) => {
                     as: "vehicle_data"
                 }
             },
-            ...(start_year && end_year
-                ? [
-                    {
-                        $addFields: {
-                            vehicle_data: {
-                                $filter: {
-                                    input: "$vehicle_data",
-                                    as: "vehicle",
-                                    cond: {
-                                        $and: [
-                                            { $lte: ["$$vehicle.start_year", parseInt(end_year)] },
-                                            { $gte: ["$$vehicle.end_year", parseInt(start_year)] }
-                                        ]
-                                    }
-                                }
-                            }
-                        }
-                    }
-                ]
-                : []),
             {
                 $match: matchStage
             },
@@ -192,7 +171,6 @@ const getVehicleAssignProduct = async (_req, _res) => {
             {
                 $facet: {
                     data: [
-                        // All transformation above already included
                     ],
                     totalCount: [
                         { $count: "count" }
@@ -202,9 +180,7 @@ const getVehicleAssignProduct = async (_req, _res) => {
         ])
         const total = product[0].totalCount[0]?.count || 0;
         let onlyProducts = product[0].data;
-        // console.log(onlyProducts);
-
-        // onlyProducts = onlyProducts.map((it) => it.product)
+        onlyProducts = onlyProducts.map((it) => it.product)
         return _res.status(200).json(
             success(onlyProducts, "Product fetch Successfully.",
                 {
@@ -222,6 +198,127 @@ const getVehicleAssignProduct = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 }
+const getVehicleAssignProductWithYear = async (_req, _res) => {
+    try {
+        const page = parseInt(_req.query.page) || 1;
+        const limit = parseInt(_req.query.page_size) || 15;
+        const skip = (page - 1) * limit;
+        const { vehicle = "", brand_id, year } = _req?.query;
+        if (!brand_id) {
+            return _res.status(400).json(error(400, "Brand Id is required."));
+        }
+
+        let vehicleIds = [];
+        if (vehicle) {
+            vehicleIds = vehicle
+                .split(",")
+                .filter(id => mongoose.Types.ObjectId.isValid(id))
+                .map(id => new mongoose.Types.ObjectId(id));
+        }
+        const matchStage = {
+            status: true,
+            brand_id: new mongoose.Types.ObjectId(brand_id),
+            ...(vehicleIds.length > 0 && {
+                vehicle_ids: { $in: vehicleIds }
+            })
+        };
+
+        const aggregationPipeline = [
+            {
+                $match: matchStage
+            },
+            {
+                $lookup: {
+                    from: "vehicles",
+                    localField: "vehicle_ids",
+                    foreignField: "_id",
+                    as: "vehicle_data",
+                    pipeline: [
+                        { $project: { start_year: 1, end_year: 1 } }
+                    ]
+                }
+            },
+            ...(year
+                ? [
+                    {
+                        $addFields: {
+                            vehicle_year_match: {
+                                $anyElementTrue: {
+                                    $map: {
+                                        input: "$vehicle_data",
+                                        as: "v",
+                                        in: {
+                                            $and: [
+                                                { $lte: ["$$v.start_year", parseInt(year)] },
+                                                { $gte: ["$$v.end_year", parseInt(year)] }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        $match: {
+                            vehicle_year_match: true
+                        }
+                    }
+                ]
+                : []),
+
+            {
+                $facet: {
+                    data: [
+
+                        { $skip: skip },
+                        { $limit: limit },
+                        {
+                            $lookup: {
+                                from: "products",
+                                localField: "product_id",
+                                foreignField: "_id",
+                                as: "product"
+                            }
+                        },
+                        {
+                            $unwind: {
+                                path: "$product",
+                                preserveNullAndEmptyArrays: true
+                            }
+                        },
+                        {
+                            $project: {
+                                vehicle_ids: 0
+                            }
+                        },
+                    ],
+                    totalCount: [
+                        { $count: "count" }
+                    ]
+                }
+            }
+        ];
+
+        const product = await VehicleProductModel.aggregate(aggregationPipeline);
+
+        const total = product[0].totalCount[0]?.count || 0;
+        let onlyProducts = product[0].data;
+        // onlyProducts = onlyProducts.map((it) => it.product)
+
+        return _res.status(200).json(
+            success(onlyProducts, "Product fetch successfully.", {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            })
+        );
+
+    } catch (err) {
+        console.log(err);
+        return _res.status(500).json(error(500, err.message));
+    }
+};
 
 const updateProduct = async (_req, _res) => {
     try {
@@ -346,51 +443,6 @@ const getProducts = async (_req, _res) => {
                 matchStage[key] = value;
             }
         }
-
-        const dataStages = [
-            {
-                $group: {
-                    _id: "$_id",
-                    name: { $first: "$name" },
-                    video: { $first: "$video" },
-                    b2b_price: { $first: "$b2b_price" },
-                    discount_b2b_price: { $first: "$discount_b2b_price" },
-                    discount_customer_price: { $first: "$discount_customer_price" },
-                    point: { $first: "$point" },
-                    new_arrival: { $first: "$new_arrival" },
-                    pop_item: { $first: "$pop_item" },
-                    part_no: { $first: "$part_no" },
-                    customer_price: { $first: "$customer_price" },
-                    min_qty: { $first: "$min_qty" },
-                    wish_product: { $first: "$wish_product" },
-                    any_discount: { $first: "$any_discount" },
-                    item_stock: { $first: "$item_stock" },
-                    sku_id: { $first: "$sku_id" },
-                    tax: { $first: "$tax" },
-                    hsn_code: { $first: "$hsn_code" },
-                    ship_days: { $first: "$ship_days" },
-                    return_days: { $first: "$return_days" },
-                    weight: { $first: "$weight" },
-                    unit: { $first: "$unit" },
-                    status: { $first: "$status" },
-                    trend_part: { $first: "$trend_part" },
-                    brand: { $first: "$brand" },
-                    images: { $first: "$images" },
-                    bulk_discount: { $first: "$bulk_discount" },
-                    updatedAt: { $first: "$updatedAt" },
-                    createdAt: { $first: "$createdAt" },
-                    updatedBy: { $first: "$updatedBy" },
-                    createdBy: { $first: "$createdBy" },
-                    return_policy: { $first: "$return_policy" },
-                    segment_type: { $push: "$segment_type" },
-                }
-            },
-            { $sort: { createdAt: -1 } }
-        ];
-        if (pagination != 'false') {
-            dataStages.push({ $skip: skip }, { $limit: limit });
-        }
-
         const aggregationPipeline = [
             {
                 $addFields: {
@@ -508,7 +560,76 @@ const getProducts = async (_req, _res) => {
             },
             {
                 $facet: {
-                    data: dataStages,
+                    data: [
+                        {
+                            $group: {
+                                _id: "$_id",
+                                name: { $first: "$name" },
+                                video: { $first: "$video" },
+                                b2b_price: { $first: "$b2b_price" },
+                                discount_b2b_price: { $first: "$discount_b2b_price" },
+                                discount_customer_price: { $first: "$discount_customer_price" },
+                                point: { $first: "$point" },
+                                new_arrival: { $first: "$new_arrival" },
+                                pop_item: { $first: "$pop_item" },
+                                part_no: { $first: "$part_no" },
+                                customer_price: { $first: "$customer_price" },
+                                min_qty: { $first: "$min_qty" },
+                                wish_product: { $first: "$wish_product" },
+                                any_discount: { $first: "$any_discount" },
+                                item_stock: { $first: "$item_stock" },
+                                sku_id: { $first: "$sku_id" },
+                                tax: { $first: "$tax" },
+                                hsn_code: { $first: "$hsn_code" },
+                                ship_days: { $first: "$ship_days" },
+                                return_days: { $first: "$return_days" },
+                                weight: { $first: "$weight" },
+                                unit: { $first: "$unit" },
+                                status: { $first: "$status" },
+                                trend_part: { $first: "$trend_part" },
+                                brand: { $first: "$brand" },
+                                images: { $first: "$images" },
+                                bulk_discount: { $first: "$bulk_discount" },
+                                updatedAt: { $first: "$updatedAt" },
+                                createdAt: { $first: "$createdAt" },
+                                updatedBy: { $first: "$updatedBy" },
+                                createdBy: { $first: "$createdBy" },
+                                return_policy: { $first: "$return_policy" },
+                                segment_type: { $push: "$segment_type" },
+                            }
+                        },
+                        {
+                            $lookup: {
+                                from: "wish_lists",
+                                let: { productId: "$_id" },
+                                pipeline: [
+                                    {
+                                        $match: {
+                                            $expr: {
+                                                $and: [
+                                                    { $eq: ["$product_id", "$$productId"] },
+                                                    { $eq: ["$isAdded", true] }
+                                                ]
+                                            }
+                                        }
+                                    }
+                                ],
+                                as: "wishListData"
+                            }
+                        },
+                        {
+                            $addFields: {
+                                wishList: { $gt: [{ $size: "$wishListData" }, 0] }
+                            }
+                        },
+                        {
+                            $project: {
+                                wishListData: 0
+                            }
+                        },
+                        { $sort: { createdAt: -1 } },
+                        ...(pagination != 'false' ? [{ $skip: skip }, { $limit: limit }] : []),
+                    ],
                     totalCount: [
                         { $count: "count" }
                     ]
@@ -517,12 +638,10 @@ const getProducts = async (_req, _res) => {
         ];
 
         const result = await ProductModel.aggregate(aggregationPipeline);
-
         const product = result[0].data;
         const total = result[0].totalCount[0]?.count || product.length;
 
-        return _res.status(200).json(success(
-            product, "Success",
+        return _res.status(200).json(success(product, "Success",
             {
                 total,
                 page: pagination === 'false' ? 1 : page,
@@ -534,7 +653,6 @@ const getProducts = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 }
-
 const getProductsById = async (_req, _res) => {
     try {
         const { productId } = _req.params
@@ -688,4 +806,4 @@ const getProductsById = async (_req, _res) => {
 }
 
 
-module.exports = { createProduct, updateProduct, getProducts, getProductsById, createVehicleProduct, getVehicleProduct, getVehicleAssignProduct }
+module.exports = { createProduct, updateProduct, getProducts, getProductsById, createVehicleProduct, getVehicleProduct, getVehicleAssignProduct, getVehicleAssignProductWithYear }
