@@ -23,6 +23,12 @@ const bannerSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'users',
     },
+    position: {
+      type: String,
+      required: true,
+      default: "top",
+      enum: ["top", "mid", "bottom"]
+    },
   },
   {
     timestamps: true, // adds createdAt and updatedAt automatically

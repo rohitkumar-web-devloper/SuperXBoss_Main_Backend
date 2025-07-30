@@ -59,15 +59,15 @@ const updateBanner = async (_req, _res) => {
         }
 
         // Check for duplicate product_id (optional)
-        if (value.product_id) {
-            const existing = await BannerModel.findOne({
-                product_id: value.product_id,
-                _id: { $ne: bannerId }
-            });
-            if (existing) {
-                return _res.status(409).json(error(409, 'Another banner with this product ID already exists'));
-            }
-        }
+        // if (value.product_id) {
+        //     const existing = await BannerModel.findOne({
+        //         product_id: value.product_id,
+        //         _id: { $ne: bannerId }
+        //     });
+        //     if (existing) {
+        //         return _res.status(409).json(error(409, 'Another banner with this product ID already exists'));
+        //     }
+        // }
 
         // Handle image upload
         let updatedImage = banner.image;
@@ -96,14 +96,21 @@ const updateBanner = async (_req, _res) => {
 
 const getBanners = async (_req, _res) => {
     try {
+        const { pagination = "true" } = _req.query || {};
         const search = _req.query.search?.trim() || '';
+        const usePagination = pagination === "true";
+        const position = _req.query.position || "";
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
 
-        const matchStage = {}; // You can customize base filtering here if needed
+        const matchStage = {};
+        if (position) {
+            matchStage.position = position;
+        }
 
-        const bannersPipeline = [
+        // Base pipeline (without skip/limit)
+        const basePipeline = [
             { $match: matchStage },
 
             {
@@ -164,6 +171,7 @@ const getBanners = async (_req, _res) => {
                     status: 1,
                     createdAt: 1,
                     updatedAt: 1,
+                    position: 1,
                     'product._id': 1,
                     'product.name': 1,
                     'createdBy._id': 1,
@@ -173,16 +181,23 @@ const getBanners = async (_req, _res) => {
                 },
             },
             { $sort: { createdAt: -1 } },
-            { $skip: skip },
-            { $limit: limit },
+        ];
+
+        // Data pipeline: add skip/limit only when pagination=true
+        const bannersPipeline = [
+            ...basePipeline,
+            ...(usePagination ? [{ $skip: skip }, { $limit: limit }] : []),
+        ];
+
+        // Count pipeline: always the same base pipeline + $count (no skip/limit)
+        const countPipeline = [
+            ...basePipeline,
+            { $count: 'total' },
         ];
 
         const [banners, totalCountArr] = await Promise.all([
             BannerModel.aggregate(bannersPipeline),
-            BannerModel.aggregate([
-                ...bannersPipeline.slice(0, -2), // Remove $skip and $limit
-                { $count: 'total' }
-            ])
+            BannerModel.aggregate(countPipeline),
         ]);
 
         const total = totalCountArr[0]?.total || 0;
@@ -203,9 +218,60 @@ const getBanners = async (_req, _res) => {
         _res.status(500).json({ success: false, error: error.message });
     }
 };
+const getBannerPositionsData = async (_req, _res) => {
+    try {
+        // Fetch all banners grouped by position
+        const banners = await BannerModel.aggregate([
+            { $match: { status: true } },
+            {
+                $lookup: {
+                    from: 'products',
+                    localField: 'product_id',
+                    foreignField: '_id',
+                    as: 'product',
+                },
+            },
+            { $unwind: { path: '$product', preserveNullAndEmptyArrays: true } },
+            {
+                $project: {
+                    image: 1,
+                    status: 1,
+                    position: 1,
+                    createdAt: 1,
+                    updatedAt: 1,
+                    'product._id': 1,
+                    'product.name': 1,
+                },
+            },
+            { $sort: { createdAt: -1 } },
+        ]);
+
+        // Group data into keys
+        const data = {
+            top: [],
+            mid: [],
+            bottom: [],
+        };
+
+        banners.forEach((banner) => {
+            if (banner.position === 'top') data.top.push(banner);
+            else if (banner.position === 'mid') data.mid.push(banner);
+            else if (banner.position === 'bottom') data.bottom.push(banner);
+        });
+
+        return _res.status(200).json(
+            success(data, 'Banners grouped by position fetched successfully')
+        );
+    } catch (error) {
+        return _res
+            .status(500)
+            .json({ success: false, error: error.message });
+    }
+};
 
 module.exports = {
     createBanner,
     updateBanner,
     getBanners,
+    getBannerPositionsData
 };

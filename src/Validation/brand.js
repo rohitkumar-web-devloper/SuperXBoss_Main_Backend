@@ -8,6 +8,12 @@ const objectId = (value, helpers) => {
   }
   return value;
 };
+const joiObjectId = Joi.string()
+  .custom(objectId, 'ObjectId validation')
+  .messages({
+    'string.base': 'must be a string',
+    'any.custom': 'must be a valid ObjectId',
+  });
 
 
 const brandSchema = Joi.object({
@@ -39,17 +45,18 @@ const brandSchema = Joi.object({
       'any.required': `"brand_segment" is required`,
     }),
   categories: Joi.array()
-    .items(Joi.string().custom(objectId).messages({
-      'string.base': `"categories" must contain string ObjectIds`,
-      'any.invalid': `"categories" must contain valid ObjectIds`,
-    }))
-    .optional(),
-  categories: Joi.array()
-    .items(Joi.string().custom(objectId).messages({
-      'string.base': `"categories" must contain string ObjectIds`,
-      'any.invalid': `"categories" must contain valid ObjectIds`,
-    }))
-    .optional(),
+    .items(
+      joiObjectId.messages({
+        'any.custom': `"categories" must contain valid ObjectIds`,
+      })
+    )
+    .single()
+    .optional()
+    .empty('')
+    .messages({
+      'array.base': `"categories" must be an array`,
+    }),
+
   status: Joi.boolean().default(false).messages({
     'boolean.base': `status must be a boolean`,
   }),

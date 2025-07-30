@@ -17,6 +17,10 @@ const VehicleProductSchema = new mongoose.Schema(
             ref: 'vehicles',
             required: true
         },
+        categories: {
+            type: [mongoose.Schema.Types.ObjectId],
+            ref: 'categories',
+        },
         status: {
             type: Boolean,
             default: true,

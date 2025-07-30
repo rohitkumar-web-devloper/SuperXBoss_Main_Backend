@@ -5,7 +5,7 @@ const { WishListModel } = require("../../schemas/wish-list");
 const createWishList = async (_req, _res) => {
     try {
         const { _id } = _req.user
-        const { product } = _req.query;
+        const { product } = _req.body;
 
         if (!product) {
             return _res.status(400).json(error(400, "Product Id is required."));

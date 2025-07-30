@@ -20,6 +20,11 @@ const bannerSchema = Joi.object({
     .messages({
       'boolean.base': 'Status must be a boolean.',
     }),
+  position: Joi.string()
+    .optional()
+    .messages({
+      'boolean.base': 'Position must be a boolean.',
+    }),
 });
 
 
@@ -35,6 +40,11 @@ const updateBannerSchema = Joi.object({
   status: Joi.boolean().optional().messages({
     'boolean.base': 'Status must be a boolean.',
   }),
+  position: Joi.string()
+    .optional()
+    .messages({
+      'boolean.base': 'Position must be a boolean.',
+    }),
 });
 
 module.exports = { bannerSchema, updateBannerSchema }

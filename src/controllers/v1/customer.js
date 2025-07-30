@@ -65,7 +65,7 @@ const verifyOTP = async (_req, _res) => {
         customer.otp = null;
         customer.token = token;
         customer.fcm_token = fcm_token;
-        await customer.save();      
+        await customer.save();
 
         return _res.status(200).json(success(customer, 'OTP verified successfully'));
 
@@ -137,4 +137,57 @@ const updateCustomer = async (_req, _res) => {
         });
     }
 };
-module.exports = { loginCustomer, verifyOTP, logoutCustomer, updateCustomer }
+
+const getCustomers = async (_req, _res) => {
+    try {
+        const page = parseInt(_req.query.page) || 1;
+        const limit = parseInt(_req.query.page_size) || 15;
+        const skip = (page - 1) * limit;
+        const search = _req.query.search || "";
+        const result = await CustomerModal.aggregate([
+            {
+                $match: {
+                    $or: [
+                        {
+                            first_name: { $regex: search, $options: "i" },
+                            last_name: { $regex: search, $options: "i" },
+                            mobile: { $regex: search, $options: "i" },
+                            refer_code: { $regex: search, $options: "i" },
+                            state: { $regex: search, $options: "i" },
+                        }
+                    ]
+                }
+            },
+            {
+                $facet: {
+                    data: [
+                        { $sort: { createdAt: -1 } },
+                        { $skip: skip },
+                        { $limit: limit },
+                        {
+                            $project: {
+                                fcm_token: 0,
+                                otp: 0
+                            }
+                        }
+                    ],
+                    totalCount: [
+                        { $count: "count" }
+                    ]
+                }
+            }
+        ])
+        const customers = result[0].data;
+        const total = result[0].totalCount[0]?.count || 0;
+
+
+        return _res.status(200).json(success(customers, 'Customer fetch successfully'));
+
+    } catch (err) {
+        console.error(err);
+        return _res.status(500).json(error(500, err.message));
+    }
+};
+
+
+module.exports = { loginCustomer, verifyOTP, logoutCustomer, updateCustomer, getCustomers }

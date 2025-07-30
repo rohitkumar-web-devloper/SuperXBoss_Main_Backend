@@ -1,3 +1,4 @@
+const { required } = require('joi');
 const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
@@ -106,6 +107,10 @@ const productSchema = new mongoose.Schema({
   return_policy: {
     type: String,
     trim: true,
+  },
+  description: {
+    type: String,
+    required: true
   },
 
   unit: {

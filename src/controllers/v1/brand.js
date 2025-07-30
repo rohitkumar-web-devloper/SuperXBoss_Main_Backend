@@ -25,6 +25,8 @@ const createBrand = async (_req, _res) => {
         }
 
         const { name, description, type, brand_day, brand_segment, status, categories } = value
+        const categoriesNormalized = normalizeCategories(categories);
+
 
         const brand = new BrandModel({
             name,
@@ -38,9 +40,9 @@ const createBrand = async (_req, _res) => {
         if (buffer && originalname) {
             brand.logo = await imageUpload(originalname, buffer, "brand");
         }
-        if (categories && categories?.length) {
+        if (categoriesNormalized && categoriesNormalized?.length) {
             let data = []
-            categories.forEach((it) => {
+            categoriesNormalized.forEach((it) => {
                 data.push({ brand_id: brand._id, categories: it })
             })
             await BrandCategoriesModel.insertMany(data)
@@ -54,8 +56,6 @@ const createBrand = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 };
-
-
 const updateBrand = async (_req, _res) => {
     try {
         const { _id, } = _req.user;
@@ -112,7 +112,6 @@ const updateBrand = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 };
-
 const getBrands = async (_req, _res) => {
     try {
         const { active, pagination = "true", type } = _req.query || {}
@@ -423,6 +422,128 @@ const getActiveBrands = async (_req, _res) => {
         return _res.status(500).json({ success: false, message: error.message });
     }
 };
+const getBrandNestedCategories = async (_req, _res) => {
+    try {
+        const rows = await BrandCategoriesModel.aggregate([
+            // Group all mappings per brand
+            {
+                $group: {
+                    _id: '$brand_id',
+                    rootIds: { $addToSet: '$categories' } // unique root category ids for this brand
+                }
+            },
+
+            // Join brand doc
+            {
+                $lookup: {
+                    from: 'brands',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'brand'
+                }
+            },
+            { $unwind: '$brand' },
+
+            // Fetch all descendants for ALL rootIds of this brand
+            {
+                $graphLookup: {
+                    from: 'categories',
+                    startWith: '$rootIds',
+                    connectFromField: '_id',
+                    connectToField: 'parent',
+                    as: 'descendants',
+                    depthField: 'depth'
+                    // If you only want active categories: restrictSearchWithMatch: { status: true }
+                }
+            },
+
+            // Also fetch the root categories themselves (graphLookup returns only descendants)
+            {
+                $lookup: {
+                    from: 'categories',
+                    localField: 'rootIds',
+                    foreignField: '_id',
+                    as: 'roots'
+                }
+            },
+
+            // Merge roots + descendants, and keep only the fields you need
+            {
+                $project: {
+                    brand: 1,
+                    categoriesFlat: {
+                        $map: {
+                            input: { $setUnion: ['$descendants', '$roots'] },
+                            as: 'c',
+                            in: {
+                                _id: '$$c._id',
+                                name: '$$c.name',
+                                slug: '$$c.slug',
+                                parent: '$$c.parent',
+                                createdAt: '$$c.createdAt'
+                            }
+                        }
+                    }
+                }
+            }
+        ]);
+
+        // Build nested tree per brand (object-wise children) in memory
+        const result = rows.map(({ brand, categoriesFlat }) => {
+            const idToNode = new Map();
+            for (const c of categoriesFlat) {
+                idToNode.set(String(c._id), { ...c, children: [] });
+            }
+
+            const roots = [];
+            for (const node of idToNode.values()) {
+                if (node.parent && idToNode.has(String(node.parent))) {
+                    idToNode.get(String(node.parent)).children.push(node);
+                } else {
+                    // parent is null OR parent not part of this brand’s set → treat as root
+                    roots.push(node);
+                }
+            }
+
+            // Optional: stable ordering by createdAt desc
+            const sortChildren = (arr) => {
+                arr.sort((a, b) => {
+                    const ad = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                    const bd = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                    return bd - ad;
+                });
+                for (const n of arr) {
+                    if (n.children && n.children.length) sortChildren(n.children);
+                }
+                return arr;
+            };
+            sortChildren(roots);
+
+            return { brand, categories: roots };
+        });
+
+        return _res.status(200).json(
+            success(result, "Success")
+        );
+
+    } catch (error) {
+        return _res.status(500).json({ success: false, message: error.message });
+    }
+};
+function normalizeCategories(input) {
+    if (!input) return [];
+    if (Array.isArray(input)) return input.filter(Boolean);
+    if (typeof input === 'string') {
+        // supports single value or CSV like "a,b,c"
+        return input
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean);
+    }
+    // If something like { _id: '...' } is passed accidentally
+    if (typeof input === 'object' && input._id) return [String(input._id)];
+    return [];
+}
 
 
-module.exports = { createBrand, updateBrand, getBrands, getActiveBrands, getBrandsWithVehicle }
+module.exports = { createBrand, updateBrand, getBrands, getActiveBrands, getBrandsWithVehicle, getBrandNestedCategories }

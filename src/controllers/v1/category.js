@@ -4,6 +4,7 @@ const { imageUpload } = require("../../functions/imageUpload");
 const unlinkOldFile = require("../../functions/unlinkFile");
 const { CategoryModal } = require("../../schemas/categories");
 const { createCategorySchema, updateCategorySchema } = require("../../Validation/category");
+const { BrandCategoriesModel } = require("../../schemas/brands-categories");
 
 const createCategory = async (_req, _res) => {
     try {
@@ -228,6 +229,8 @@ const getCategories = async (_req, _res) => {
         return _req.status(500).json({ success: false, message: error.message });
     }
 };
+
+
 
 
 module.exports = { createCategory, updateCategory, getCategories } 

@@ -1,7 +1,7 @@
 const express = require("express");
 const categoryRouter = express.Router();
 const { asyncHandler } = require("../../middleware/error-handler");
-const { createCategory, updateCategory, getCategories } = require("../../controllers/v1/category");
+const { createCategory, updateCategory, getCategories, getNestedCategories } = require("../../controllers/v1/category");
 const { upload } = require("../../middleware/upload");
 
 // Assuming userController.login is a function

@@ -74,16 +74,19 @@ const createVehicleProduct = async (_req, _res) => {
         }
         const responses = [];
         for (const [brand_id, data] of Object.entries(assign_data)) {
+            console.log(data, "data");
+
             const existing = await VehicleProductModel.findOne({ product_id, brand_id });
             if (existing) {
                 existing.vehicle_ids = data.vehicles;
+                existing.categories = data.categories;
                 existing.status = data.status;
                 await existing.save();
                 responses.push({ action: 'updated', product_id, brand_id, vehicle_ids: data?.vehicles, status: data?.data });
             } else {
-                const newDoc = new VehicleProductModel({ product_id, brand_id, vehicle_ids: data?.vehicles, status: data?.data });
+                const newDoc = new VehicleProductModel({ product_id, brand_id, vehicle_ids: data?.vehicles, status: data?.status, categories: data?.categories });
                 await newDoc.save();
-                responses.push({ action: 'created', product_id, brand_id, vehicle_ids: data?.vehicles, status: data?.data });
+                responses.push({ action: 'created', product_id, brand_id, vehicle_ids: data?.vehicles, status: data?.data, categories: data?.categories });
             }
         }
 
@@ -104,10 +107,11 @@ const getVehicleProduct = async (_req, _res) => {
         let result;
         const product = await VehicleProductModel.aggregate([
             { $match: { product_id: new mongoose.Types.ObjectId(product_id) } },
+            { $sort: { createdAt: -1 } }
         ])
 
         result = product.reduce((acc, curr) => {
-            acc[curr.brand_id] = { vehicles: curr.vehicle_ids, status: curr.status };
+            acc[curr.brand_id] = { vehicles: curr.vehicle_ids, status: curr.status, categories: curr?.categories };
             return acc;
         }, {});
 
@@ -203,11 +207,7 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
-        const { vehicle = "", brand_id, year } = _req?.query;
-        if (!brand_id) {
-            return _res.status(400).json(error(400, "Brand Id is required."));
-        }
-
+        const { vehicle = "", brand_id, year, segment } = _req?.query;
         let vehicleIds = [];
         if (vehicle) {
             vehicleIds = vehicle
@@ -215,13 +215,24 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
                 .filter(id => mongoose.Types.ObjectId.isValid(id))
                 .map(id => new mongoose.Types.ObjectId(id));
         }
-        const matchStage = {
+        let matchStage = {
             status: true,
-            brand_id: new mongoose.Types.ObjectId(brand_id),
-            ...(vehicleIds.length > 0 && {
-                vehicle_ids: { $in: vehicleIds }
-            })
+
         };
+        if (brand_id) {
+            matchStage = {
+                ...matchStage,
+                brand_id: new mongoose.Types.ObjectId(brand_id),
+                ...(vehicleIds.length > 0 && {
+                    vehicle_ids: { $in: vehicleIds }
+                })
+            }
+        }
+        let segment_data = []
+        if (segment) {
+            segment ? segment.split(",") : ""
+            segment_data = typeof segment == "string" ? [new mongoose.Types.ObjectId(segment)] : segment.map(id => new mongoose.Types.ObjectId(id))
+        }
 
         const aggregationPipeline = [
             {
@@ -265,32 +276,41 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
                     }
                 ]
                 : []),
+            {
+                $group: {
+                    _id: "$product_id",
+                    product_id: { $first: "$product_id" }
+                }
+            },
+            {
+                $lookup: {
+                    from: "products",
+                    let: { pid: "$product_id" },
+                    pipeline: [
+                        { $match: { $expr: { $eq: ["$_id", "$$pid"] } } },
+                        ...(segment_data.length
+                            ? [{ $match: { segment_type: { $in: segment_data } } }]
+                            : []
+                        )
+                    ],
+                    as: "product"
+                }
+            },
 
+            { $unwind: { path: "$product", preserveNullAndEmptyArrays: false } },
+            { $sort: { "product.createdAt": -1, "product._id": 1 } },
+            {
+                $project: {
+                    vehicle_ids: 0
+                }
+            },
             {
                 $facet: {
                     data: [
 
                         { $skip: skip },
                         { $limit: limit },
-                        {
-                            $lookup: {
-                                from: "products",
-                                localField: "product_id",
-                                foreignField: "_id",
-                                as: "product"
-                            }
-                        },
-                        {
-                            $unwind: {
-                                path: "$product",
-                                preserveNullAndEmptyArrays: true
-                            }
-                        },
-                        {
-                            $project: {
-                                vehicle_ids: 0
-                            }
-                        },
+                        // { $replaceRoot: { newRoot: "$product" } }
                     ],
                     totalCount: [
                         { $count: "count" }
@@ -298,6 +318,8 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
                 }
             }
         ];
+        console.log(aggregationPipeline);
+
 
         const product = await VehicleProductModel.aggregate(aggregationPipeline);
 
@@ -409,6 +431,9 @@ const getProducts = async (_req, _res) => {
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
+        const { _id, type } = _req.user
+        const hasUser = type == "customer" ? mongoose.Types.ObjectId.isValid(_id) : false
+        const userObjectId = hasUser ? new mongoose.Types.ObjectId(_id) : null;
 
         const matchStage = {};
 
@@ -598,45 +623,51 @@ const getProducts = async (_req, _res) => {
                                 segment_type: { $push: "$segment_type" },
                             }
                         },
-                        {
-                            $lookup: {
-                                from: "wish_lists",
-                                let: { productId: "$_id" },
-                                pipeline: [
-                                    {
-                                        $match: {
-                                            $expr: {
-                                                $and: [
-                                                    { $eq: ["$product_id", "$$productId"] },
-                                                    { $eq: ["$isAdded", true] }
-                                                ]
-                                            }
-                                        }
-                                    }
-                                ],
-                                as: "wishListData"
-                            }
-                        },
-                        {
-                            $addFields: {
-                                wishList: { $gt: [{ $size: "$wishListData" }, 0] }
-                            }
-                        },
-                        {
-                            $project: {
-                                wishListData: 0
-                            }
-                        },
+                        ...(hasUser
+                            ? [
+                                {
+                                    $lookup: {
+                                        from: "wish_lists",
+                                        let: { productId: "$_id", userId: userObjectId },
+                                        pipeline: [
+                                            {
+                                                $match: {
+                                                    $expr: {
+                                                        $and: [
+                                                            { $eq: ["$product_id", "$$productId"] },
+                                                            { $eq: ["$customer_id", "$$userId"] },
+                                                            { $eq: ["$isAdded", true] },
+                                                        ],
+                                                    },
+                                                },
+                                            },
+                                            { $limit: 1 }, // small optimization
+                                        ],
+                                        as: "wishListData",
+                                    },
+                                },
+                                {
+                                    $addFields: {
+                                        wishList: { $gt: [{ $size: "$wishListData" }, 0] },
+                                    },
+                                },
+                                { $project: { wishListData: 0 } },
+                            ]
+                            : []),
                         { $sort: { createdAt: -1 } },
                         ...(pagination != 'false' ? [{ $skip: skip }, { $limit: limit }] : []),
                     ],
                     totalCount: [
-                        { $count: "count" }
+                        {
+                            $group: {
+                                _id: "$_id"
+                            }
+                        },
+                        { $count: "count" } // now counts unique products
                     ]
                 }
             }
         ];
-
         const result = await ProductModel.aggregate(aggregationPipeline);
         const product = result[0].data;
         const total = result[0].totalCount[0]?.count || product.length;

@@ -44,6 +44,7 @@ const productJoiSchema = Joi.object({
     ship_days: Joi.number().min(0).optional(),
     return_days: Joi.number().min(0).optional(),
     return_policy: Joi.string().optional(),
+    description: Joi.string().required(),
     weight: Joi.string().optional(),
     unit: Joi.string().optional(),
     status: Joi.boolean().optional(),
