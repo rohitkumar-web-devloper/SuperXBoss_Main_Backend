@@ -19,6 +19,8 @@ const express = require("express");
 const WishListRouter = require('./admin/wish-list.route');
 const AddToCartRouter = require('./admin/add-to-cart.route');
 const recentViewRouter = require('./admin/recent-view-product.route');
+const { asyncHandler } = require('../middleware/error-handler');
+const { getOverView } = require('../controllers/v1/dashboard');
 const router = express.Router();
 
 /* Routes */
@@ -39,6 +41,7 @@ router.use("/recharge", authenticateUser, rechargeRouter);
 router.use("/wish-list", authenticateUser, WishListRouter);
 router.use("/add-to-cart", authenticateUser, AddToCartRouter);
 router.use("/view", authenticateUser, recentViewRouter);
+router.use("/overview", authenticateUser, asyncHandler(getOverView));
 
 /* Export the router */
 module.exports = { router }

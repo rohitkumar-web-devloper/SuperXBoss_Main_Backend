@@ -196,7 +196,7 @@ const getRecentViewHistory = async (_req, _res) => {
 
         return _res
             .status(200)
-            .json(success(list, "Wishlist fetch successfully.",
+            .json(success(list, "Viewed Products fetch successfully.",
                 {
                     total,
                     page: page,
