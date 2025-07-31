@@ -6,7 +6,7 @@ const cronCoupon = async () => {
     cron.schedule("*/1 * * * *", async () => {
         let currentDate = new Date();
         currentDate = moment(currentDate)
-        const retrieveCoupon = await CouponModel.find();
+        const retrieveCoupon = await CouponModel.find({ status: true });
         for (const item of retrieveCoupon) {
             const dateStr = item.end_date;
             const endDate = moment(dateStr)

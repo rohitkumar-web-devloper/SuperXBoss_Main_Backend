@@ -15,7 +15,7 @@ productRouter.post('/vehicle-assign',
 productRouter.get('/vehicle-assign/:product_id',
     asyncHandler(getVehicleProduct));
 productRouter.get('/vehicle-assign-products', asyncHandler(getVehicleAssignProduct));
-productRouter.get('/vehicle-assign-products-years', asyncHandler(getVehicleAssignProductWithYear));
+productRouter.get('/assigned', asyncHandler(getVehicleAssignProductWithYear));
 productRouter.put('/:productId',
     upload.fields([
         { name: 'images', maxCount: 5 },

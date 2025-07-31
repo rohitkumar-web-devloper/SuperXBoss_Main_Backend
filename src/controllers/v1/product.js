@@ -202,12 +202,221 @@ const getVehicleAssignProduct = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 }
+// const getVehicleAssignProductWithYear = async (_req, _res) => {
+//     try {
+//         const page = parseInt(_req.query.page) || 1;
+//         const limit = parseInt(_req.query.page_size) || 15;
+//         const skip = (page - 1) * limit;
+//         const { vehicle = "", brand_id, year, segment, categories } = _req?.query;
+//         const { _id, type } = _req.user
+//         const hasUser = type == "customer" ? mongoose.Types.ObjectId.isValid(_id) : false
+//         const userObjectId = hasUser ? new mongoose.Types.ObjectId(_id) : null;
+//         console.log(hasUser, userObjectId);
+
+//         let vehicleIds = [];
+//         if (vehicle) {
+//             vehicleIds = vehicle
+//                 .split(",")
+//                 .filter(id => mongoose.Types.ObjectId.isValid(id))
+//                 .map(id => new mongoose.Types.ObjectId(id));
+//         }
+//         let matchStage = {
+//             status: true,
+//         };
+//         if (categories) {
+//             matchStage.categories = { $in: [new mongoose.Types.ObjectId(categories)] }
+//         }
+
+//         if (brand_id) {
+//             matchStage = {
+//                 ...matchStage,
+//                 brand_id: new mongoose.Types.ObjectId(brand_id),
+//                 ...(vehicleIds.length > 0 && {
+//                     vehicle_ids: { $in: vehicleIds }
+//                 })
+//             }
+//         }
+//         let segment_data = []
+//         if (segment) {
+//             segment ? segment.split(",") : ""
+//             segment_data = typeof segment == "string" ? [new mongoose.Types.ObjectId(segment)] : segment.map(id => new mongoose.Types.ObjectId(id))
+//         }
+
+//         const aggregationPipeline = [
+//             {
+//                 $match: matchStage
+//             },
+//             {
+//                 $lookup: {
+//                     from: "vehicles",
+//                     localField: "vehicle_ids",
+//                     foreignField: "_id",
+//                     as: "vehicle_data",
+//                     pipeline: [
+//                         { $project: { start_year: 1, end_year: 1 } }
+//                     ]
+//                 }
+//             },
+//             ...(year
+//                 ? [
+//                     {
+//                         $addFields: {
+//                             vehicle_year_match: {
+//                                 $anyElementTrue: {
+//                                     $map: {
+//                                         input: "$vehicle_data",
+//                                         as: "v",
+//                                         in: {
+//                                             $and: [
+//                                                 { $lte: ["$$v.start_year", parseInt(year)] },
+//                                                 { $gte: ["$$v.end_year", parseInt(year)] }
+//                                             ]
+//                                         }
+//                                     }
+//                                 }
+//                             }
+//                         }
+//                     },
+//                     {
+//                         $match: {
+//                             vehicle_year_match: true
+//                         }
+//                     }
+//                 ]
+//                 : []),
+//             {
+//                 $group: {
+//                     _id: "$product_id",
+//                     product_id: { $first: "$product_id" }
+//                 }
+//             },
+//             {
+//                 $lookup: {
+//                     from: "products",
+//                     let: { pid: "$product_id" },
+//                     pipeline: [
+//                         { $match: { $expr: { $eq: ["$_id", "$$pid"] } } },
+//                         ...(segment_data.length
+//                             ? [{ $match: { segment_type: { $in: segment_data } } }]
+//                             : []
+//                         )
+//                     ],
+//                     as: "product"
+//                 }
+//             },
+
+//             { $unwind: { path: "$product", preserveNullAndEmptyArrays: false } },
+//             ...(hasUser
+//                 ? [
+//                     {
+//                         $lookup: {
+//                             from: "wish_lists",
+//                             let: { productId: "$product._id", userId: userObjectId },
+//                             pipeline: [
+//                                 {
+//                                     $match: {
+//                                         $expr: {
+//                                             $and: [
+//                                                 { $eq: ["$product_id", "$$productId"] },
+//                                                 { $eq: ["$customer_id", "$$userId"] },
+//                                                 { $eq: ["$isAdded", true] },
+//                                             ],
+//                                         },
+//                                     },
+//                                 },
+//                                 { $limit: 1 }, // small optimization
+//                             ],
+//                             as: "wishListData",
+//                         },
+//                     },
+//                     {
+//                         $addFields: {
+//                             "product.wishList": { $gt: [{ $size: "$wishListData" }, 0] }
+//                         }
+//                     }
+//                 ]
+//                 : []),
+//             { $sort: { "product.createdAt": -1, "product._id": 1 } },
+//             {
+//                 $lookup: {
+//                     from: "brands",
+//                     localField: "product.brand_id",
+//                     foreignField: "_id",
+//                     as: "brand",
+//                     pipeline: [
+//                         { $project: { name: 1, _id: 1 } }
+//                     ]
+//                 }
+//             },
+//             { $unwind: { path: "$brand", preserveNullAndEmptyArrays: false } },
+//             {
+//                 $addFields: {
+//                     "product.brand": "$brand"
+//                 }
+//             },
+//             {
+//                 $addFields: {
+//                     "product.wishList": "$wishList"
+//                 }
+//             },
+//             {
+//                 $project: {
+//                     vehicle_ids: 0,
+//                     wishListData: 0,
+//                 }
+//             },
+//             {
+//                 $facet: {
+//                     data: [
+
+//                         { $skip: skip },
+//                         { $limit: limit },
+//                         // { $replaceRoot: { newRoot: "$product" } }
+//                     ],
+//                     totalCount: [
+//                         { $count: "count" }
+//                     ]
+//                 }
+//             }
+//         ];
+//         console.log(aggregationPipeline);
+
+
+//         const product = await VehicleProductModel.aggregate(aggregationPipeline);
+
+//         const total = product[0].totalCount[0]?.count || 0;
+//         let onlyProducts = product[0].data;
+//         onlyProducts = onlyProducts.map((it) => it.product)
+//         console.log(onlyProducts);
+
+
+//         return _res.status(200).json(
+//             success(onlyProducts, "Product fetch successfully.", {
+//                 total,
+//                 page,
+//                 limit,
+//                 totalPages: Math.ceil(total / limit)
+//             })
+//         );
+
+//     } catch (err) {
+//         console.log(err);
+//         return _res.status(500).json(error(500, err.message));
+//     }
+// };
+
 const getVehicleAssignProductWithYear = async (_req, _res) => {
     try {
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
-        const { vehicle = "", brand_id, year, segment } = _req?.query;
+
+        const { vehicle = "", brand_id, year, segment, categories } = _req?.query;
+        const { _id, type } = _req.user;
+
+        const hasUser = type === "customer" && mongoose.Types.ObjectId.isValid(_id);
+        const userObjectId = hasUser ? new mongoose.Types.ObjectId(_id) : null;
+
         let vehicleIds = [];
         if (vehicle) {
             vehicleIds = vehicle
@@ -215,29 +424,29 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
                 .filter(id => mongoose.Types.ObjectId.isValid(id))
                 .map(id => new mongoose.Types.ObjectId(id));
         }
-        let matchStage = {
-            status: true,
 
-        };
+        let matchStage = { status: true };
+
+        if (categories) {
+            matchStage.categories = { $in: [new mongoose.Types.ObjectId(categories)] };
+        }
+
         if (brand_id) {
-            matchStage = {
-                ...matchStage,
-                brand_id: new mongoose.Types.ObjectId(brand_id),
-                ...(vehicleIds.length > 0 && {
-                    vehicle_ids: { $in: vehicleIds }
-                })
+            matchStage.brand_id = new mongoose.Types.ObjectId(brand_id);
+            if (vehicleIds.length > 0) {
+                matchStage.vehicle_ids = { $in: vehicleIds };
             }
         }
-        let segment_data = []
+
+        let segment_data = [];
         if (segment) {
-            segment ? segment.split(",") : ""
-            segment_data = typeof segment == "string" ? [new mongoose.Types.ObjectId(segment)] : segment.map(id => new mongoose.Types.ObjectId(id))
+            segment_data = typeof segment === "string"
+                ? [new mongoose.Types.ObjectId(segment)]
+                : segment.map(id => new mongoose.Types.ObjectId(id));
         }
 
         const aggregationPipeline = [
-            {
-                $match: matchStage
-            },
+            { $match: matchStage },
             {
                 $lookup: {
                     from: "vehicles",
@@ -269,11 +478,7 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
                             }
                         }
                     },
-                    {
-                        $match: {
-                            vehicle_year_match: true
-                        }
-                    }
+                    { $match: { vehicle_year_match: true } }
                 ]
                 : []),
             {
@@ -290,27 +495,71 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
                         { $match: { $expr: { $eq: ["$_id", "$$pid"] } } },
                         ...(segment_data.length
                             ? [{ $match: { segment_type: { $in: segment_data } } }]
-                            : []
-                        )
+                            : [])
                     ],
                     as: "product"
                 }
             },
-
             { $unwind: { path: "$product", preserveNullAndEmptyArrays: false } },
+            ...(hasUser
+                ? [
+                    {
+                        $lookup: {
+                            from: "wish_lists",
+                            let: { productId: "$product._id", userId: userObjectId },
+                            pipeline: [
+                                {
+                                    $match: {
+                                        $expr: {
+                                            $and: [
+                                                { $eq: ["$product_id", "$$productId"] },
+                                                { $eq: ["$customer_id", "$$userId"] },
+                                                { $eq: ["$isAdded", true] }
+                                            ]
+                                        }
+                                    }
+                                },
+                                { $limit: 1 }
+                            ],
+                            as: "wishListData"
+                        }
+                    },
+                    {
+                        $addFields: {
+                            "product.wishList": { $gt: [{ $size: "$wishListData" }, 0] }
+                        }
+                    }
+                ]
+                : []),
             { $sort: { "product.createdAt": -1, "product._id": 1 } },
             {
+                $lookup: {
+                    from: "brands",
+                    localField: "product.brand_id",
+                    foreignField: "_id",
+                    as: "brand",
+                    pipeline: [
+                        { $project: { name: 1, _id: 1 } }
+                    ]
+                }
+            },
+            { $unwind: { path: "$brand", preserveNullAndEmptyArrays: false } },
+            {
+                $addFields: {
+                    "product.brand": "$brand"
+                }
+            },
+            {
                 $project: {
-                    vehicle_ids: 0
+                    vehicle_ids: 0,
+                    wishListData: 0
                 }
             },
             {
                 $facet: {
                     data: [
-
                         { $skip: skip },
-                        { $limit: limit },
-                        // { $replaceRoot: { newRoot: "$product" } }
+                        { $limit: limit }
                     ],
                     totalCount: [
                         { $count: "count" }
@@ -318,14 +567,12 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
                 }
             }
         ];
-        console.log(aggregationPipeline);
-
 
         const product = await VehicleProductModel.aggregate(aggregationPipeline);
 
         const total = product[0].totalCount[0]?.count || 0;
-        let onlyProducts = product[0].data;
-        // onlyProducts = onlyProducts.map((it) => it.product)
+        let onlyProducts = product[0].data.map((item) => item.product);
+
 
         return _res.status(200).json(
             success(onlyProducts, "Product fetch successfully.", {
@@ -337,7 +584,7 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
         );
 
     } catch (err) {
-        console.log(err);
+        console.error(err);
         return _res.status(500).json(error(500, err.message));
     }
 };
