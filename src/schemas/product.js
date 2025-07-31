@@ -59,10 +59,6 @@ const productSchema = new mongoose.Schema({
     default: 1,
     min: 1,
   },
-  wish_product: {
-    type: Boolean,
-    default: false,
-  },
   any_discount: {
     type: Number,
     min: 0,

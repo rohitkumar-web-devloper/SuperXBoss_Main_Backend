@@ -18,8 +18,6 @@ const createAddToCartList = async (_req, _res) => {
             product_id: product,
             customer_id: _id,
         });
-        console.log(existingEntry);
-
         if (existingEntry) {
             existingEntry.qty = qty;
             await existingEntry.save();
@@ -54,7 +52,6 @@ const getAddToCartList = async (_req, _res) => {
                 $match: {
                     isCheckedOut: false,
                     customer_id: new mongoose.Types.ObjectId(_id)
-                    // customer_id: new mongoose.Types.ObjectId("687f5cd1011ab240defdca98")
                 }
             },
             { $sort: { createdAt: -1 } },

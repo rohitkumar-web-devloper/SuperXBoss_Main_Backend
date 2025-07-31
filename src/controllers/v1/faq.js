@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const { error, success } = require("../../functions/functions");
 const { FAQModel } = require('../../schemas/faq')
 const { createFaqSchema, updateFaqSchema } = require('../../Validation/faq')
@@ -78,6 +79,8 @@ const getFAQs = async (_req, res) => {
         const skip = (page - 1) * limit;
         const search = _req.query.search || "";
         const { type, status } = _req.query;
+        const { _id, type: useType } = _req.user
+        const hasUser = useType == "customer" ? mongoose.Types.ObjectId.isValid(_id) : false
 
         const matchStage = {};
         if (search) {
@@ -91,12 +94,15 @@ const getFAQs = async (_req, res) => {
 
         const aggregationPipeline = [
             { $match: matchStage },
-            {
+            ...(!hasUser ? [{
                 $lookup: {
                     from: "users",
                     localField: "createdBy",
                     foreignField: "_id",
-                    as: "createdBy"
+                    as: "createdBy",
+                    pipeline: [
+                        { $project: { name: 1, _id: 1 } }
+                    ]
                 }
             },
             {
@@ -104,27 +110,26 @@ const getFAQs = async (_req, res) => {
                     path: "$createdBy",
                     preserveNullAndEmptyArrays: true
                 }
-            },
-            {
-                $project: {
-                    "user.password": 0,
-                    "user.access_token": 0,
-                    "createdBy.password": 0,
-                    "createdBy.access_token": 0,
-                    "createdBy.parent": 0,
-                    "createdBy.role": 0,
-                    "createdBy.address": 0,
-                    "createdBy.whatsapp": 0,
-                    "createdBy.countryCode": 0,
-                    "createdBy.email": 0,
-                    "createdBy.type": 0,
-                    "createdBy.status": 0,
-                    "createdBy.createdAt": 0,
-                    "createdBy.updatedAt": 0,
-
+            }] : []),
+            ...(!hasUser ? [{
+                $lookup: {
+                    from: "users",
+                    localField: "updatedBy",
+                    foreignField: "_id",
+                    as: "updatedBy",
+                    pipeline: [
+                        { $project: { name: 1, _id: 1 } }
+                    ]
                 }
             },
-            { $sort: { sorting: 1, createdAt: -1 } },
+            {
+                $unwind: {
+                    path: "$updatedBy",
+                    preserveNullAndEmptyArrays: true
+                }
+            }] : []),
+
+            { $sort: { createdAt: -1 } },
             {
                 $facet: {
                     data: [

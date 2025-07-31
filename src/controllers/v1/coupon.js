@@ -1,3 +1,4 @@
+const { default: mongoose } = require("mongoose");
 const { error, success, generateRandomCode } = require("../../functions/functions");
 const { CouponModel } = require('../../schemas/coupon')
 const { createCouponSchema, updateCouponSchema } = require('../../Validation/coupon')
@@ -90,7 +91,8 @@ const updateCoupon = async (_req, _res) => {
 const getCoupon = async (_req, _res) => {
     try {
         const { code, status } = _req.query;
-
+        const { _id, type } = _req.user
+        const hasUser = type == "customer" ? mongoose.Types.ObjectId.isValid(_id) : false
         const match = {};
         if (code) {
             match.code = { $regex: code, $options: 'i' };
@@ -101,24 +103,40 @@ const getCoupon = async (_req, _res) => {
 
         const result = await CouponModel.aggregate([
             { $match: match },
-            {
+            ...(!hasUser ? [{
                 $lookup: {
-                    from: 'users',
-                    localField: 'createdBy',
-                    foreignField: '_id',
-                    as: 'createdBy'
+                    from: "users",
+                    localField: "createdBy",
+                    foreignField: "_id",
+                    as: "createdBy",
+                    pipeline: [
+                        { $project: { name: 1, _id: 1 } }
+                    ]
                 }
             },
-            { $unwind: { path: '$createdBy', preserveNullAndEmptyArrays: true } },
             {
+                $unwind: {
+                    path: "$createdBy",
+                    preserveNullAndEmptyArrays: true
+                }
+            }] : []),
+            ...(!hasUser ? [{
                 $lookup: {
-                    from: 'users',
-                    localField: 'updatedBy',
-                    foreignField: '_id',
-                    as: 'updatedBy'
+                    from: "users",
+                    localField: "updatedBy",
+                    foreignField: "_id",
+                    as: "updatedBy",
+                    pipeline: [
+                        { $project: { name: 1, _id: 1 } }
+                    ]
                 }
             },
-            { $unwind: { path: '$updatedBy', preserveNullAndEmptyArrays: true } },
+            {
+                $unwind: {
+                    path: "$updatedBy",
+                    preserveNullAndEmptyArrays: true
+                }
+            }] : []),
             {
                 $project: {
                     code: 1,
@@ -130,10 +148,8 @@ const getCoupon = async (_req, _res) => {
                     createdAt: 1,
                     updatedAt: 1,
                     __v: 1,
-                    'createdBy._id': 1,
-                    'createdBy.name': 1,
-                    'updatedBy._id': 1,
-                    'updatedBy.name': 1
+                    'createdBy': 1,
+                    'updatedBy': 1,
                 }
             },
             {

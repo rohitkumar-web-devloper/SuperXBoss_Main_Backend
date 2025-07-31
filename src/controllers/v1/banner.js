@@ -4,6 +4,7 @@ const { BannerModel } = require('../../schemas/banner');
 const { bannerSchema, updateBannerSchema } = require('../../Validation/banner');
 const { imageUpload } = require("../../functions/imageUpload");
 const unlinkOldFile = require("../../functions/unlinkFile");
+const { default: mongoose } = require('mongoose');
 
 const createBanner = async (_req, _res) => {
     try {
@@ -58,18 +59,6 @@ const updateBanner = async (_req, _res) => {
             return _res.status(404).json(error(404, 'Banner not found'));
         }
 
-        // Check for duplicate product_id (optional)
-        // if (value.product_id) {
-        //     const existing = await BannerModel.findOne({
-        //         product_id: value.product_id,
-        //         _id: { $ne: bannerId }
-        //     });
-        //     if (existing) {
-        //         return _res.status(409).json(error(409, 'Another banner with this product ID already exists'));
-        //     }
-        // }
-
-        // Handle image upload
         let updatedImage = banner.image;
         if (_req.file && _req.file.buffer) {
             if (banner.image) {
@@ -103,6 +92,8 @@ const getBanners = async (_req, _res) => {
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
+        const { _id, type } = _req.user
+        const hasUser = type == "customer" ? mongoose.Types.ObjectId.isValid(_id) : false
 
         const matchStage = {};
         if (position) {
@@ -137,34 +128,40 @@ const getBanners = async (_req, _res) => {
                 }]
                 : []),
 
-            {
+            ...(!hasUser ? [{
                 $lookup: {
-                    from: 'users',
-                    localField: 'createdBy',
-                    foreignField: '_id',
-                    as: 'createdBy',
-                },
+                    from: "users",
+                    localField: "createdBy",
+                    foreignField: "_id",
+                    as: "createdBy",
+                    pipeline: [
+                        { $project: { name: 1, _id: 1 } }
+                    ]
+                }
             },
             {
                 $unwind: {
-                    path: '$createdBy',
-                    preserveNullAndEmptyArrays: true,
-                },
-            },
-            {
+                    path: "$createdBy",
+                    preserveNullAndEmptyArrays: true
+                }
+            }] : []),
+            ...(!hasUser ? [{
                 $lookup: {
-                    from: 'users',
-                    localField: 'updatedBy',
-                    foreignField: '_id',
-                    as: 'updatedBy',
-                },
+                    from: "users",
+                    localField: "updatedBy",
+                    foreignField: "_id",
+                    as: "updatedBy",
+                    pipeline: [
+                        { $project: { name: 1, _id: 1 } }
+                    ]
+                }
             },
             {
                 $unwind: {
-                    path: '$updatedBy',
-                    preserveNullAndEmptyArrays: true,
-                },
-            },
+                    path: "$updatedBy",
+                    preserveNullAndEmptyArrays: true
+                }
+            }] : []),
             {
                 $project: {
                     image: 1,

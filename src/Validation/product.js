@@ -34,7 +34,6 @@ const productJoiSchema = Joi.object({
         Joi.array().items(Joi.string())
     ).optional(),
     min_qty: Joi.number().min(1).optional(),
-    wish_product: Joi.boolean().optional(),
     any_discount: Joi.number().min(0).max(100).optional(),
     brand_id: Joi.string().hex().length(24).required(),
     item_stock: Joi.number().min(0).optional(),

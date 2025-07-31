@@ -117,6 +117,7 @@ const getWishList = async (_req, _res) => {
                                 }
                             ]
                             : []),
+
                         {
                             $addFields: {
                                 "product.unit": "$unit"

@@ -35,8 +35,10 @@ const updateRating = async (_req, _res) => {
 
 const getRating = async (_req, _res) => {
     try {
+        const { type } = _req.user
+        const hasUser = type == "customer"
         const summaries = await RatingSummary.find();
-        return _res.status(200).json(success(summaries[0], "Rating Summaries"));
+        return _res.status(200).json(success(hasUser ? summaries[0] : summaries, "Rating Summaries"));
     } catch (err) {
         return _res.status(500).json(error(500, err.message));
     }
