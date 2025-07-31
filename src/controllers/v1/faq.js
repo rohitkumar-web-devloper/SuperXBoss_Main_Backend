@@ -33,7 +33,6 @@ const createFAQ = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 };
-
 const updateFAQ = async (_req, _res) => {
     try {
         const { error: customError, value } = updateFaqSchema.validate({ ..._req.body });
@@ -71,7 +70,6 @@ const updateFAQ = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 };
-
 const getFAQs = async (_req, res) => {
     try {
         const page = parseInt(_req.query.page) || 1;
@@ -163,5 +161,4 @@ const getFAQs = async (_req, res) => {
         return _res.status(500).json(error(500, error.message));
     }
 };
-
 module.exports = { createFAQ, updateFAQ, getFAQs };

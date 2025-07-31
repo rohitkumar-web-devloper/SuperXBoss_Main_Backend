@@ -1,7 +1,6 @@
 const Joi = require("joi");
 const { error, success } = require("../../functions/functions");
 const { RatingSummary } = require('../../schemas/ratingSummary')
-
 const updateRating = async (_req, _res) => {
     const schema = Joi.object({
         userCount: Joi.number().min(0),
@@ -31,8 +30,6 @@ const updateRating = async (_req, _res) => {
         return _res.status(500).json({ success: false, message: err.message });
     }
 };
-
-
 const getRating = async (_req, _res) => {
     try {
         const { type } = _req.user
@@ -43,5 +40,4 @@ const getRating = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 }
-
 module.exports = { updateRating, getRating }

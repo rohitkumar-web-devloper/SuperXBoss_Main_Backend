@@ -34,7 +34,6 @@ const createVehicleSegmentTypes = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 }
-
 const updateVehicleSegmentType = async (_req, _res) => {
     try {
         const { error: validationError, value } = vehicleSegmentTypeSchema.validate(_req.body, { abortEarly: false });
@@ -84,10 +83,6 @@ const updateVehicleSegmentType = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 };
-
-
-
-
 const getVehicleSegmentTypes = async (_req, res) => {
     try {
 

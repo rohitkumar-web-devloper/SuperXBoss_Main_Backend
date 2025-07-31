@@ -3,7 +3,6 @@ const { BrandModel } = require("../../schemas/brands");
 const { brandSchema, updateBrandSchema } = require("../../Validation/brand");
 const { imageUpload } = require("../../functions/imageUpload");
 const { BrandCategoriesModel } = require("../../schemas/brands-categories");
-
 const createBrand = async (_req, _res) => {
     try {
         const { _id } = _req.user;

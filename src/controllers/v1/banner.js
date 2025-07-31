@@ -38,7 +38,6 @@ const createBanner = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 };
-
 const updateBanner = async (_req, _res) => {
     try {
         const { _id } = _req.user;
@@ -82,7 +81,6 @@ const updateBanner = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 };
-
 const getBanners = async (_req, _res) => {
     try {
         const { pagination = "true" } = _req.query || {};

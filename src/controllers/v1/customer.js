@@ -41,7 +41,6 @@ const loginCustomer = async (_req, _res) => {
         return _res.status(500).json(error('Internal Server Error'));
     }
 };
-
 const verifyOTP = async (_req, _res) => {
     try {
         const { error: customError } = customerVerifyOtpSchema.validate({ ..._req.body });
@@ -74,7 +73,6 @@ const verifyOTP = async (_req, _res) => {
         return _res.status(500).json(error('Internal Server Error'));
     }
 };
-
 const logoutCustomer = async (_req, _res) => {
     try {
         if (!_req.body) {
@@ -95,7 +93,6 @@ const logoutCustomer = async (_req, _res) => {
         return _res.status(500).json(error('Internal Server Error'));
     }
 };
-
 const updateCustomer = async (_req, _res) => {
     try {
         const { error: customError, value } = customerUpdateSchema.validate({ ..._req.body, profile: _req.file }, {
@@ -137,7 +134,6 @@ const updateCustomer = async (_req, _res) => {
         });
     }
 };
-
 const getCustomers = async (_req, _res) => {
     try {
         const page = parseInt(_req.query.page) || 1;
@@ -188,6 +184,4 @@ const getCustomers = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 };
-
-
 module.exports = { loginCustomer, verifyOTP, logoutCustomer, updateCustomer, getCustomers }

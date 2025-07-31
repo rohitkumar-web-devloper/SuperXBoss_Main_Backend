@@ -38,7 +38,6 @@ const loginUser = async (_req, _res) => {
         return _res.status(500).json({ error: 'Internal Server Error' });
     }
 };
-
 const logoutUser = async (_req, _res) => {
     try {
         const { _id } = _req.user
@@ -63,7 +62,6 @@ const logoutUser = async (_req, _res) => {
         return _res.status(500).json(error(500, 'Internal Server Error'));
     }
 };
-
 const createUser = async (_req, _res) => {
     try {
         const { _id } = _req.user
@@ -103,7 +101,6 @@ const createUser = async (_req, _res) => {
         return _res.status(500).json(error(500, "Internal server error"));
     }
 };
-
 const updateUser = async (_req, _res) => {
     try {
         const { userId } = _req.params;
@@ -178,7 +175,6 @@ const updateUser = async (_req, _res) => {
         return _res.status(500).json({ error: 'Internal server error' });
     }
 };
-
 const getUser = async (_req, _res) => {
     try {
         const { _id } = _req.user;
@@ -263,6 +259,4 @@ const getUser = async (_req, _res) => {
         return _res.status(500).json(error(500, "Internal server error"));
     }
 };
-
-
 module.exports = { createUser, loginUser, updateUser, logoutUser, getUser } 

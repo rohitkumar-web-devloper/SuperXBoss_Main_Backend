@@ -1,8 +1,7 @@
 const { default: mongoose } = require("mongoose");
 const { error, success } = require("../../functions/functions");
-const { WishListModel } = require("../../schemas/wish-list");
-
-const createWishList = async (_req, _res) => {
+const { RecentViewProductModel } = require("../../schemas/recent-view-products");
+const createRecentHistory = async (_req, _res) => {
     try {
         const { _id } = _req.user
         const { product } = _req.body;
@@ -10,33 +9,33 @@ const createWishList = async (_req, _res) => {
         if (!product) {
             return _res.status(400).json(error(400, "Product Id is required."));
         }
-        const existingEntry = await WishListModel.findOne({
+        const existingEntry = await RecentViewProductModel.findOne({
             product_id: product,
             customer_id: _id,
         });
         if (existingEntry) {
-            existingEntry.isAdded = !existingEntry.isAdded;
+            existingEntry.count = existingEntry.count + 1;
             await existingEntry.save();
             return _res
                 .status(200)
-                .json(success(existingEntry, "Wishlist updated successfully."));
+                .json(success(existingEntry, "Product view count updated successfully."));
         } else {
-            const data = new WishListModel({
+            const data = new RecentViewProductModel({
                 product_id: product,
                 customer_id: _id,
-                isAdded: true,
+                count: 1,
             });
 
             const saved = await data.save();
             return _res
                 .status(201)
-                .json(success(saved, "Wish list added successfully."));
+                .json(success(saved, "Product view added successfully."));
         }
     } catch (err) {
         return _res.status(500).json(error(500, err.message));
     }
 };
-const getWishList = async (_req, _res) => {
+const getRecentViewHistory = async (_req, _res) => {
     try {
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
@@ -46,10 +45,9 @@ const getWishList = async (_req, _res) => {
         const hasUser = type === "customer" && mongoose.Types.ObjectId.isValid(_id);
         const userObjectId = hasUser ? new mongoose.Types.ObjectId(_id) : null;
 
-        const result = await WishListModel.aggregate([
+        const result = await RecentViewProductModel.aggregate([
             {
                 $match: {
-                    isAdded: true,
                     customer_id: new mongoose.Types.ObjectId(_id)
                 }
             },
@@ -100,8 +98,7 @@ const getWishList = async (_req, _res) => {
                         { $unwind: { path: "$brand", preserveNullAndEmptyArrays: false } },
                         {
                             $addFields: {
-                                "product.brand": "$brand",
-                                "product.unit": "$unit"
+                                "product.brand": "$brand"
                             }
                         },
                         ...(hasUser
@@ -171,13 +168,15 @@ const getWishList = async (_req, _res) => {
                             ]
                             : []),
 
-
+                        {
+                            $addFields: {
+                                "product.unit": "$unit"
+                            }
+                        },
                         {
                             $project: {
                                 unit: 0,
                                 brand: 0,
-                                wishListData: 0,
-                                addToCartDetails: 0,
                             }
                         },
                         { $skip: skip },
@@ -209,4 +208,4 @@ const getWishList = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 };
-module.exports = { createWishList, getWishList }
+module.exports = { createRecentHistory, getRecentViewHistory }

@@ -202,7 +202,6 @@ const getVehicleAssignProduct = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 }
-
 const getVehicleAssignProductWithYear = async (_req, _res) => {
     try {
         const page = parseInt(_req.query.page) || 1;
@@ -385,7 +384,8 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
             {
                 $project: {
                     vehicle_ids: 0,
-                    wishListData: 0
+                    wishListData: 0,
+                    addToCartDetails: 0,
                 }
             },
             {
@@ -421,7 +421,6 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 };
-
 const updateProduct = async (_req, _res) => {
     try {
         if (!_req?.body) {
@@ -931,6 +930,4 @@ const getProductsById = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 }
-
-
 module.exports = { createProduct, updateProduct, getProducts, getProductsById, createVehicleProduct, getVehicleProduct, getVehicleAssignProduct, getVehicleAssignProductWithYear }

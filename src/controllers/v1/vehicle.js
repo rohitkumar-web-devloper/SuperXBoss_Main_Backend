@@ -120,7 +120,6 @@ const updateVehicle = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 }
-
 const getVehicle = async (_req, _res) => {
     try {
         const { active, pagination = "true" } = _req.query || {}

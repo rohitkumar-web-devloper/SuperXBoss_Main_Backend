@@ -36,7 +36,6 @@ const createCoupon = async (_req, _res) => {
         return _res.status(500).json(error(500, 'Internal server error'));
     }
 };
-
 const updateCoupon = async (_req, _res) => {
     try {
         const { couponId } = _req.params
@@ -87,7 +86,6 @@ const updateCoupon = async (_req, _res) => {
         return _res.status(500).json(error(500, 'Internal server error'));
     }
 };
-
 const getCoupon = async (_req, _res) => {
     try {
         const { code, status } = _req.query;

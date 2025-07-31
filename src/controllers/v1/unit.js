@@ -154,5 +154,4 @@ const getUnits = async (_req, _res) => {
         )
     );
 }
-
 module.exports = { createUnit, updateUnit, getUnits }

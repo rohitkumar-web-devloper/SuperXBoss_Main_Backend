@@ -1,6 +1,5 @@
 const { default: mongoose } = require("mongoose");
 const { error, success } = require("../../functions/functions");
-const { WishListModel } = require("../../schemas/wish-list");
 const { AddToCartModel } = require("../../schemas/add-to-cart");
 
 const createAddToCartList = async (_req, _res) => {
@@ -42,7 +41,10 @@ const createAddToCartList = async (_req, _res) => {
 };
 const getAddToCartList = async (_req, _res) => {
     try {
-        const { _id } = _req.user
+        const { _id, type } = _req.user;
+
+        const hasUser = type === "customer" && mongoose.Types.ObjectId.isValid(_id);
+        const userObjectId = hasUser ? new mongoose.Types.ObjectId(_id) : null;
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
@@ -88,13 +90,95 @@ const getAddToCartList = async (_req, _res) => {
                             }
                         },
                         {
+                            $lookup: {
+                                from: "brands",
+                                localField: "product.brand_id",
+                                foreignField: "_id",
+                                as: "brand",
+                                pipeline: [
+                                    { $project: { name: 1, _id: 1 } }
+                                ]
+                            }
+                        },
+                        { $unwind: { path: "$brand", preserveNullAndEmptyArrays: false } },
+                        {
                             $addFields: {
+                                "product.brand": "$brand",
                                 "product.unit": "$unit"
                             }
                         },
+                        ...(hasUser
+                            ? [
+                                {
+                                    $lookup: {
+                                        from: "wish_lists",
+                                        let: { productId: "$product._id", userId: userObjectId },
+                                        pipeline: [
+                                            {
+                                                $match: {
+                                                    $expr: {
+                                                        $and: [
+                                                            { $eq: ["$product_id", "$$productId"] },
+                                                            { $eq: ["$customer_id", "$$userId"] },
+                                                            { $eq: ["$isAdded", true] }
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            { $limit: 1 }
+                                        ],
+                                        as: "wishListData"
+                                    }
+                                },
+                                {
+                                    $addFields: {
+                                        "product.wishList": { $gt: [{ $size: "$wishListData" }, 0] }
+                                    }
+                                }
+                            ]
+                            : []),
+                        ...(hasUser
+                            ? [
+                                {
+                                    $lookup: {
+                                        from: "add_to_carts",
+                                        let: { productId: "$product._id", userId: userObjectId },
+                                        pipeline: [
+                                            {
+                                                $match: {
+                                                    $expr: {
+                                                        $and: [
+                                                            { $eq: ["$product_id", "$$productId"] },
+                                                            { $eq: ["$customer_id", "$$userId"] },
+                                                            { $eq: ["$isCheckedOut", false] }
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            { $limit: 1 }
+                                        ],
+                                        as: "addToCartDetails"
+                                    }
+                                },
+                                {
+                                    $unwind: {
+                                        path: "$addToCartDetails",
+                                        preserveNullAndEmptyArrays: true
+                                    }
+                                },
+                                {
+                                    $addFields: {
+                                        "product.addToCartQty": "$addToCartDetails.qty"
+                                    }
+                                }
+                            ]
+                            : []),
                         {
                             $project: {
-                                unit: 0
+                                unit: 0,
+                                brand: 0,
+                                wishListData: 0,
+                                addToCartDetails: 0,
                             }
                         },
                         { $skip: skip },
@@ -126,6 +210,5 @@ const getAddToCartList = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 };
-
 
 module.exports = { createAddToCartList, getAddToCartList }

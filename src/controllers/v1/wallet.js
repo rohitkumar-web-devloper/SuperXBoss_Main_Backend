@@ -132,5 +132,4 @@ const getWallet = async (_req, _res) => {
         )
     );
 }
-
 module.exports = { createWallet, updateWallet, getWallet }

@@ -18,6 +18,7 @@ const vehicleSegmentType = require('./admin/vehicleSegmentType.route');
 const express = require("express");
 const WishListRouter = require('./admin/wish-list.route');
 const AddToCartRouter = require('./admin/add-to-cart.route');
+const recentViewRouter = require('./admin/recent-view-product.route');
 const router = express.Router();
 
 /* Routes */
@@ -37,6 +38,7 @@ router.use("/unit", authenticateUser, unitRouter);
 router.use("/recharge", authenticateUser, rechargeRouter);
 router.use("/wish-list", authenticateUser, WishListRouter);
 router.use("/add-to-cart", authenticateUser, AddToCartRouter);
+router.use("/view", authenticateUser, recentViewRouter);
 
 /* Export the router */
 module.exports = { router }
