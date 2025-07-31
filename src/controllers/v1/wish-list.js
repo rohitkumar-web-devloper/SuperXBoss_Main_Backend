@@ -38,10 +38,13 @@ const createWishList = async (_req, _res) => {
 };
 const getWishList = async (_req, _res) => {
     try {
-        const { _id } = _req.user
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
+        const { _id, type } = _req.user;
+
+        const hasUser = type === "customer" && mongoose.Types.ObjectId.isValid(_id);
+        const userObjectId = hasUser ? new mongoose.Types.ObjectId(_id) : null;
 
         const result = await WishListModel.aggregate([
             {
@@ -84,6 +87,36 @@ const getWishList = async (_req, _res) => {
                                 preserveNullAndEmptyArrays: true
                             }
                         },
+                        ...(hasUser
+                            ? [
+                                {
+                                    $lookup: {
+                                        from: "wish_lists",
+                                        let: { productId: "$product._id", userId: userObjectId },
+                                        pipeline: [
+                                            {
+                                                $match: {
+                                                    $expr: {
+                                                        $and: [
+                                                            { $eq: ["$product_id", "$$productId"] },
+                                                            { $eq: ["$customer_id", "$$userId"] },
+                                                            { $eq: ["$isAdded", true] }
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            { $limit: 1 }
+                                        ],
+                                        as: "wishListData"
+                                    }
+                                },
+                                {
+                                    $addFields: {
+                                        "product.wishList": { $gt: [{ $size: "$wishListData" }, 0] }
+                                    }
+                                }
+                            ]
+                            : []),
                         {
                             $addFields: {
                                 "product.unit": "$unit"
