@@ -3,7 +3,7 @@ const cron = require('node-cron');
 const { CouponModel } = require("../schemas/coupon");
 
 const cronCoupon = async () => {
-    cron.schedule("*/1 * * * *", async () => {
+    cron.schedule("0 0 * * *", async () => {
         let currentDate = new Date();
         currentDate = moment(currentDate)
         const retrieveCoupon = await CouponModel.find({ status: true });

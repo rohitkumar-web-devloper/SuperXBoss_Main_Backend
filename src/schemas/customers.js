@@ -33,6 +33,10 @@ const customerSchema = new mongoose.Schema(
             type: String,
             trim: true
         },
+        pin_code: {
+            type: String,
+            trim: true
+        },
         refer_code: {
             type: String,
             trim: true,
@@ -100,6 +104,10 @@ const customerSchema = new mongoose.Schema(
         otp: {
             type: String,
             default: null
+        },
+        status: {
+            type: Boolean,
+            default: true
         }
     },
     {

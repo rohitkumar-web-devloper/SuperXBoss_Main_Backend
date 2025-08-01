@@ -51,7 +51,7 @@ const getRecentViewHistory = async (_req, _res) => {
                     customer_id: new mongoose.Types.ObjectId(_id)
                 }
             },
-            { $sort: { createdAt: -1 } },
+            { $sort: { updatedAt: -1 } },
 
             {
                 $facet: {

@@ -21,6 +21,7 @@ const AddToCartRouter = require('./admin/add-to-cart.route');
 const recentViewRouter = require('./admin/recent-view-product.route');
 const { asyncHandler } = require('../middleware/error-handler');
 const { getOverView } = require('../controllers/v1/dashboard');
+const orderRouter = require('./admin/order.route');
 const router = express.Router();
 
 /* Routes */
@@ -42,6 +43,7 @@ router.use("/wish-list", authenticateUser, WishListRouter);
 router.use("/add-to-cart", authenticateUser, AddToCartRouter);
 router.use("/view", authenticateUser, recentViewRouter);
 router.use("/overview", authenticateUser, asyncHandler(getOverView));
+router.use("/order", authenticateUser, orderRouter);
 
 /* Export the router */
 module.exports = { router }

@@ -140,19 +140,23 @@ const getCustomers = async (_req, _res) => {
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
         const search = _req.query.search || "";
+        const match = {
+
+        }
+        if (search) {
+            match.$or = [
+                {
+                    first_name: { $regex: search, $options: "i" },
+                    last_name: { $regex: search, $options: "i" },
+                    mobile: { $regex: search, $options: "i" },
+                    refer_code: { $regex: search, $options: "i" },
+                    state: { $regex: search, $options: "i" },
+                }
+            ]
+        }
         const result = await CustomerModal.aggregate([
             {
-                $match: {
-                    $or: [
-                        {
-                            first_name: { $regex: search, $options: "i" },
-                            last_name: { $regex: search, $options: "i" },
-                            mobile: { $regex: search, $options: "i" },
-                            refer_code: { $regex: search, $options: "i" },
-                            state: { $regex: search, $options: "i" },
-                        }
-                    ]
-                }
+                $match: match
             },
             {
                 $facet: {
@@ -173,11 +177,19 @@ const getCustomers = async (_req, _res) => {
                 }
             }
         ])
+
         const customers = result[0].data;
         const total = result[0].totalCount[0]?.count || 0;
 
 
-        return _res.status(200).json(success(customers, 'Customer fetch successfully'));
+        return _res.status(200).json(success(customers, 'Customer fetch successfully',
+            {
+                total,
+                page: page,
+                limit: limit,
+                totalPages: Math.ceil(total / limit),
+            }
+        ));
 
     } catch (err) {
         console.error(err);

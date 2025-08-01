@@ -9,7 +9,7 @@ const money2 = (v) => (v == null ? v : Math.round((Number(v) + Number.EPSILON) *
 
 const ORDER_STATUSES = ['pending', 'confirmed', 'cancelled', 'shipped', 'completed', 'refunded'];
 const PAYMENT_STATUSES = ['pending', 'authorized', 'paid', 'failed', 'refunded'];
-const DISCOUNT_TYPES = ['none', 'percent', 'flat'];
+const DISCOUNT_TYPES = ['coupon', 'bulk_discount', 'any_discount'];
 
 /* ------------------------------ Item Subdoc ------------------------------- */
 
@@ -31,7 +31,7 @@ const orderItemSchema = new Schema(
         unitPrice: { type: Number, required: true, min: 0, set: money2 }, // pre-discount
         discountType: { type: String, enum: DISCOUNT_TYPES, default: 'none' },
         // percent: 0–100, flat: currency units; validated below
-        discountValue: { type: Number, min: 0, set: money2, default: 0 },
+        applied_discount: { type: Number, min: 0, set: money2, default: 0 },
 
         // Effective pricing after discounts
         effectiveUnitPrice: { type: Number, required: true, min: 0, set: money2 },
@@ -51,7 +51,7 @@ const orderItemSchema = new Schema(
 );
 
 // Validate percent discounts range
-orderItemSchema.path('discountValue').validate(function (v) {
+orderItemSchema.path('applied_discount').validate(function (v) {
     if (this.discountType === 'percent') {
         return v >= 0 && v <= 100;
     }
@@ -77,12 +77,12 @@ orderItemSchema.pre('validate', function (next) {
 const OrderListSchema = new Schema(
     {
         // Customer
-        customerType: { type: String, enum: ['customer', 'b2b'], required: true },
+        customerType: { type: String, enum: ['customer', 'b2b', "vendor"], required: true },
         customer_id: { type: Types.ObjectId, ref: 'customers', required: true, index: true },
 
         // Currency
+        totalDiscount: { type: Number, },
         currency: { type: String, default: 'INR', set: (v) => (v ? String(v).toUpperCase() : 'INR') },
-
         // Items
         items: {
             type: [orderItemSchema],
@@ -98,6 +98,13 @@ const OrderListSchema = new Schema(
             taxTotal: { type: Number, required: true, min: 0, set: money2, default: 0 },
             grandTotal: { type: Number, required: true, min: 0, set: money2, default: 0 },
             totalQty: { type: Number, min: 0, default: 0 },
+        },
+        coupon_applied: {
+            code: { type: String, default: null },
+            amount: { type: Number, default: null },
+            min_cart_amt: { type: Number, default: null },
+            start_date: { type: Date, default: null },
+            end_date: { type: Date, default: null },
         },
 
         // Address reference
@@ -119,6 +126,7 @@ const OrderListSchema = new Schema(
             // Optional snapshots from checkout
             method: { type: String, trim: true },          // card/upi/netbanking/etc
             email: { type: String, trim: true },
+            name: { type: String, trim: true },
             contact: { type: String, trim: true },
 
             // Optional extra info
@@ -131,6 +139,9 @@ const OrderListSchema = new Schema(
 
         // Order lifecycle
         status: { type: String, enum: ORDER_STATUSES, default: 'pending', index: true },
+        walletAmountUse: { type: Number, default: 0 },
+        pointUse: { type: Number, default: 0 },
+        earnPoints: { type: Number, default: 0 },
 
         // Identifiers & metadata
         orderNo: { type: String, trim: true, unique: true, sparse: true }, // e.g., "ORD-2025-000123"
