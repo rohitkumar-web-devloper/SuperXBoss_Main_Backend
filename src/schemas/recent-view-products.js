@@ -16,6 +16,10 @@ const RecentViewSchema = new mongoose.Schema(
             type: Number,
             default: 1,
         },
+        lastViewedAt: {
+            type: Date,
+            default: Date.now,
+        },
     },
     {
         timestamps: true, // adds createdAt and updatedAt automatically

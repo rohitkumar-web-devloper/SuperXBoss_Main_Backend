@@ -3,27 +3,41 @@ const { error, success } = require("../../functions/functions");
 const { RecentViewProductModel } = require("../../schemas/recent-view-products");
 const createRecentHistory = async (_req, _res) => {
     try {
-        const { _id } = _req.user
+        const { _id } = _req.user;
         const { product } = _req.body;
 
         if (!product) {
             return _res.status(400).json(error(400, "Product Id is required."));
         }
+
         const existingEntry = await RecentViewProductModel.findOne({
             product_id: product,
             customer_id: _id,
         });
+
+        const now = new Date();
+
         if (existingEntry) {
-            existingEntry.count = existingEntry.count + 1;
-            await existingEntry.save();
-            return _res
-                .status(200)
-                .json(success(existingEntry, "Product view count updated successfully."));
+            const hoursSinceLastView = (now - existingEntry.lastViewedAt) / (1000 * 60 * 60); // convert ms to hours
+
+            if (hoursSinceLastView >= 12) {
+                existingEntry.count += 1;
+                existingEntry.lastViewedAt = now;
+                await existingEntry.save();
+                return _res
+                    .status(200)
+                    .json(success(existingEntry, "Product view count updated successfully after 24 hours."));
+            } else {
+                return _res
+                    .status(200)
+                    .json(success(existingEntry, "Product already viewed within the last 24 hours."));
+            }
         } else {
             const data = new RecentViewProductModel({
                 product_id: product,
                 customer_id: _id,
                 count: 1,
+                lastViewedAt: now
             });
 
             const saved = await data.save();
@@ -35,6 +49,7 @@ const createRecentHistory = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 };
+
 const getRecentViewHistory = async (_req, _res) => {
     try {
         const page = parseInt(_req.query.page) || 1;

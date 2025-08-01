@@ -196,4 +196,15 @@ const getCustomers = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 };
-module.exports = { loginCustomer, verifyOTP, logoutCustomer, updateCustomer, getCustomers }
+const getCustomersInfo = async (_req, _res) => {
+    try {
+        const { _id } = _req.user
+        const result = await CustomerModal.findById(_id).select({ fcm_token: 0, token: 0 })
+        return _res.status(200).json(success(result, 'Customer fetch successfully'));
+
+    } catch (err) {
+        console.error(err);
+        return _res.status(500).json(error(500, err.message));
+    }
+};
+module.exports = { loginCustomer, verifyOTP, logoutCustomer, updateCustomer, getCustomers, getCustomersInfo }

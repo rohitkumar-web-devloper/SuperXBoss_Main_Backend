@@ -404,6 +404,8 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
         const product = await VehicleProductModel.aggregate(aggregationPipeline);
 
         const total = product[0].totalCount[0]?.count || 0;
+        console.log(product[0].data);
+
         let onlyProducts = product[0].data.map((item) => item.product);
 
 
@@ -718,7 +720,7 @@ const getProducts = async (_req, _res) => {
                                 {
                                     $lookup: {
                                         from: "add_to_carts",
-                                        let: { productId: "$product._id", userId: userObjectId },
+                                        let: { productId: "$_id", userId: userObjectId },
                                         pipeline: [
                                             {
                                                 $match: {
@@ -744,7 +746,7 @@ const getProducts = async (_req, _res) => {
                                 },
                                 {
                                     $addFields: {
-                                        "product.addToCartQty": "$addToCartDetails.qty"
+                                        "addToCartQty": "$addToCartDetails.qty"
                                     }
                                 }
                             ]
@@ -766,7 +768,6 @@ const getProducts = async (_req, _res) => {
         const result = await ProductModel.aggregate(aggregationPipeline);
         const product = result[0].data;
         const total = result[0].totalCount[0]?.count || product.length;
-
         return _res.status(200).json(success(product, "Success",
             {
                 total,

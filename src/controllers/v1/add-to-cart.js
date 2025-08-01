@@ -1,17 +1,33 @@
 const { default: mongoose } = require("mongoose");
 const { error, success } = require("../../functions/functions");
 const { AddToCartModel } = require("../../schemas/add-to-cart");
+const { ProductModel } = require("../../schemas/product");
 
 const createAddToCartList = async (_req, _res) => {
     try {
         const { _id } = _req.user
-        const { product, qty } = _req.body;
+        const { product, qty = 1 } = _req.body;
 
         if (!product) {
             return _res.status(400).json(error(400, "Product Id is required."));
         }
-        if (!qty) {
+
+        if (qty == undefined || qty == null) {
             return _res.status(400).json(error(400, "Product Qty is required."));
+        }
+        if ((qty || 0) < 0) {
+            return _res.status(400).json(error(400, "Product Qty must be one."));
+        }
+
+        const productData = await ProductModel.findById(product)
+        if (!productData) {
+            return _res.status(400).json(error(400, "Product not found."));
+        }
+        if (productData.item_stock <= 0) {
+            return _res.status(400).json(error(400, "Product is out of stock."));
+        }
+        if (productData.item_stock < qty) {
+            return _res.status(400).json(error(400, "Requested quantity exceeds available stock."));
         }
         const existingEntry = await AddToCartModel.findOne({
             product_id: product,
@@ -53,7 +69,9 @@ const getAddToCartList = async (_req, _res) => {
             {
                 $match: {
                     isCheckedOut: false,
-                    customer_id: new mongoose.Types.ObjectId(_id)
+                    status: true,
+                    customer_id: new mongoose.Types.ObjectId(_id),
+                    qty: { $gt: 0 }
                 }
             },
             { $sort: { createdAt: -1 } },
