@@ -3,6 +3,7 @@ const { BrandModel } = require("../../schemas/brands");
 const { brandSchema, updateBrandSchema } = require("../../Validation/brand");
 const { imageUpload } = require("../../functions/imageUpload");
 const { BrandCategoriesModel } = require("../../schemas/brands-categories");
+const { default: mongoose } = require("mongoose");
 const createBrand = async (_req, _res) => {
     try {
         const { _id } = _req.user;
@@ -421,6 +422,81 @@ const getActiveBrands = async (_req, _res) => {
         return _res.status(500).json({ success: false, message: error.message });
     }
 };
+const getActiveBrandCategories = async (_req, _res) => {
+    try {
+        const { brand_id, search = "" } = _req.query;
+        const page = parseInt(_req.query.page) || 1;
+        const limit = parseInt(_req.query.page_size) || 15;
+        const skip = (page - 1) * limit;
+        let match = {
+
+        }
+        if (search) {
+            match["categories.name"] = {
+                $regex: search,
+                $options: "i" // case-insensitive
+            }
+        }
+
+        if (!brand_id) {
+            return _res.status(400).json(error(400, "Brand Id is required."));
+        }
+
+        const result = await BrandCategoriesModel.aggregate([
+            {
+                $match: {
+                    brand_id: new mongoose.Types.ObjectId(brand_id)
+                }
+            },
+            {
+                $lookup: {
+                    from: "categories",
+                    localField: "categories",
+                    foreignField: "_id",
+                    as: "categories"
+                }
+            },
+            {
+                $unwind: "$categories"
+            },
+            {
+                $match: match
+            },
+            {
+                $replaceRoot: {
+                    newRoot: "$categories"
+                }
+            },
+            {
+                $facet: {
+                    data: [
+                        { $skip: skip },
+                        { $limit: limit }
+                    ],
+                    totalCount: [
+                        { $count: "count" }
+                    ]
+                }
+            }
+        ]);
+
+        const categories = result[0].data;
+
+
+        const total = result[0].totalCount[0]?.count || 0;
+
+        return _res.status(200).json(success(categories, "Categories fetched successfully", {
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit)
+        }));
+
+    } catch (err) {
+        return _res.status(500).json(error(500, err.message));
+    }
+};
+
 const getBrandNestedCategories = async (_req, _res) => {
     try {
         const rows = await BrandCategoriesModel.aggregate([
@@ -428,7 +504,7 @@ const getBrandNestedCategories = async (_req, _res) => {
             {
                 $group: {
                     _id: '$brand_id',
-                    rootIds: { $addToSet: '$categories' } // unique root category ids for this brand
+                    rootIds: { $addToSet: '$`categories`' } // unique root category ids for this brand
                 }
             },
 
@@ -545,4 +621,4 @@ function normalizeCategories(input) {
 }
 
 
-module.exports = { createBrand, updateBrand, getBrands, getActiveBrands, getBrandsWithVehicle, getBrandNestedCategories }
+module.exports = { createBrand, updateBrand, getBrands, getActiveBrands, getBrandsWithVehicle, getBrandNestedCategories, getActiveBrandCategories }

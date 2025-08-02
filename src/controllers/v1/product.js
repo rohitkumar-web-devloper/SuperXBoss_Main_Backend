@@ -226,15 +226,24 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
         if (categories) {
             matchStage.categories = { $in: [new mongoose.Types.ObjectId(categories)] };
         }
-
+        let brandIds = [];
         if (brand_id) {
             matchStage.brand_id = new mongoose.Types.ObjectId(brand_id);
+            brandIds = brand_id
+                .split(",")
+                .filter(id => mongoose.Types.ObjectId.isValid(id))
+                .map(id => new mongoose.Types.ObjectId(id));
+            if (brandIds.length > 0) {
+                matchStage.brand_id = { $in: brandIds };
+            }
             if (vehicleIds.length > 0) {
                 matchStage.vehicle_ids = { $in: vehicleIds };
             }
         }
 
         let segment_data = [];
+        console.log(segment);
+
         if (segment) {
             segment_data = typeof segment === "string"
                 ? [new mongoose.Types.ObjectId(segment)]
@@ -404,7 +413,6 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
         const product = await VehicleProductModel.aggregate(aggregationPipeline);
 
         const total = product[0].totalCount[0]?.count || 0;
-        console.log(product[0].data);
 
         let onlyProducts = product[0].data.map((item) => item.product);
 
@@ -783,6 +791,8 @@ const getProducts = async (_req, _res) => {
 const getProductsById = async (_req, _res) => {
     try {
         const { productId } = _req.params
+        const { type, _id } = _req.user
+        const hasUser = type == "customer" ? mongoose.Types.ObjectId.isValid(_id) : false
 
         const aggregationPipeline = [
             { $match: { _id: new mongoose.Types.ObjectId(productId), } },
@@ -814,12 +824,15 @@ const getProductsById = async (_req, _res) => {
                     preserveNullAndEmptyArrays: true
                 }
             },
-            {
+            ...(!hasUser ? [{
                 $lookup: {
                     from: "users",
                     localField: "createdBy",
                     foreignField: "_id",
-                    as: "createdBy"
+                    as: "createdBy",
+                    pipeline: [
+                        { $project: { name: 1, _id: 1 } }
+                    ]
                 }
             },
             {
@@ -827,13 +840,16 @@ const getProductsById = async (_req, _res) => {
                     path: "$createdBy",
                     preserveNullAndEmptyArrays: true
                 }
-            },
-            {
+            }] : []),
+            ...(!hasUser ? [{
                 $lookup: {
                     from: "users",
                     localField: "updatedBy",
                     foreignField: "_id",
-                    as: "updatedBy"
+                    as: "updatedBy",
+                    pipeline: [
+                        { $project: { name: 1, _id: 1 } }
+                    ]
                 }
             },
             {
@@ -841,43 +857,29 @@ const getProductsById = async (_req, _res) => {
                     path: "$updatedBy",
                     preserveNullAndEmptyArrays: true
                 }
+            }] : []),
+            {
+                $lookup: {
+                    from: "units",
+                    localField: "unit",
+                    foreignField: "_id",
+                    as: "unit"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$unit",
+                    preserveNullAndEmptyArrays: true
+                }
             },
             {
                 $project: {
-                    "createdBy.access_token": 0,
-                    "createdBy.password": 0,
-                    "createdBy.createdAt": 0,
-                    "createdBy.updatedAt": 0,
-                    "createdBy.role": 0,
-                    "createdBy.type": 0,
-                    "createdBy.status": 0,
-                    "createdBy.mobile": 0,
-                    "createdBy.whatsapp": 0,
-                    "createdBy.address": 0,
-                    "createdBy.countryCode": 0,
-                    "createdBy.updatedBy": 0,
-                    "createdBy.parent": 0,
-                    "updatedBy.access_token": 0,
-                    "updatedBy.password": 0,
-                    "updatedBy.createdAt": 0,
-                    "updatedBy.updatedAt": 0,
-                    "updatedBy.role": 0,
-                    "updatedBy.type": 0,
-                    "updatedBy.status": 0,
-                    "updatedBy.mobile": 0,
-                    "updatedBy.whatsapp": 0,
-                    "updatedBy.address": 0,
-                    "updatedBy.countryCode": 0,
-                    "updatedBy.updatedBy": 0,
-                    "updatedBy.parent": 0,
                     "bulk_discount._id": 0,
                     "brand.brand_segment": 0,
                     "brand.brand_day_offer": 0,
                     "brand.brand_day": 0,
                     "brand.type": 0,
                     "brand.description": 0,
-                    "brand.sorting": 0,
-
                 }
             },
             {
@@ -915,7 +917,10 @@ const getProductsById = async (_req, _res) => {
                                 updatedBy: { $first: "$updatedBy" },
                                 createdBy: { $first: "$createdBy" },
                                 return_policy: { $first: "$return_policy" },
+                                description: { $first: "$description" },
                                 segment_type: { $push: "$segment_type" },
+                                discount_b2b_price: { $first: "$discount_b2b_price" },
+                                discount_customer_price: { $first: "$discount_customer_price" },
                             }
                         },
                     ],
