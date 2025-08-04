@@ -7,7 +7,7 @@ const { generateToken } = require("../../Helper");
 
 const loginCustomer = async (_req, _res) => {
     try {
-        const { error: customError, value } = customerLoginSchema.validate({ ..._req.body }, { abortEarly: false });
+        const { error: customError } = customerLoginSchema.validate({ ..._req.body }, { abortEarly: false });
         if (customError) {
             return _res.status(400).json(error(400, customError.details.map(err => err.message)[0]));
         }
@@ -27,7 +27,9 @@ const loginCustomer = async (_req, _res) => {
                 mobile
             }, 'User registered. OTP sent.'));
         }
-
+        if (!customer.status) {
+            return _res.status(400).json(error(400, "Your account is inactive. Please contact support."));
+        }
         customer.otp = '1234';
         await customer.save();
 
@@ -106,7 +108,7 @@ const updateCustomer = async (_req, _res) => {
         const { customerId } = _req.body;
         const existing = await CustomerModal.findById(customerId);
         if (!existing) {
-            return _res.status(409).json(error(409, 'Customer not foundddd'));
+            return _res.status(409).json(error(409, 'Customer not found'));
         }
 
         let profile = existing.profile;
@@ -132,6 +134,29 @@ const updateCustomer = async (_req, _res) => {
             status: false,
             message: 'Internal server error',
         });
+    }
+};
+const updateCustomerStatus = async (_req, _res) => {
+    try {
+        const { status } = _req.body
+        const { customerId } = _req.params
+
+        if (status == undefined || status == null) {
+            return _res.json(error(400, "Status is required."));
+        }
+
+        const existing = await CustomerModal.findById(customerId);
+        if (!existing) {
+            return _res.status(409).json(error(409, 'Customer not found'));
+        }
+
+        existing.status = status
+        await existing.save()
+        return _res.status(200).json(success(existing, 'Customer updated successfully'));
+
+    } catch (err) {
+        console.error(err);
+        return _res.status(500).json(error(500, "Internal server error"));
     }
 };
 const getCustomers = async (_req, _res) => {
@@ -207,4 +232,4 @@ const getCustomersInfo = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 };
-module.exports = { loginCustomer, verifyOTP, logoutCustomer, updateCustomer, getCustomers, getCustomersInfo }
+module.exports = { loginCustomer, verifyOTP, logoutCustomer, updateCustomer, getCustomers, getCustomersInfo, updateCustomerStatus }

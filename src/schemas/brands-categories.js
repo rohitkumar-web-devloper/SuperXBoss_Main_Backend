@@ -15,6 +15,7 @@ const brandCategoriesSchema = new mongoose.Schema(
     },
     {
         timestamps: true,
+        versionKey: false,
     }
 );
 

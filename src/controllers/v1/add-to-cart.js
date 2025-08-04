@@ -55,10 +55,12 @@ const createAddToCartList = async (_req, _res) => {
         return _res.status(500).json(error(500, err.message));
     }
 };
+
 const getAddToCartList = async (_req, _res) => {
     try {
         const { _id, type } = _req.user;
-
+        const { pagination = "true" } = _req.query || {}
+        const usePagination = pagination === "true";
         const hasUser = type === "customer" && mongoose.Types.ObjectId.isValid(_id);
         const userObjectId = hasUser ? new mongoose.Types.ObjectId(_id) : null;
         const page = parseInt(_req.query.page) || 1;
@@ -199,8 +201,7 @@ const getAddToCartList = async (_req, _res) => {
                                 addToCartDetails: 0,
                             }
                         },
-                        { $skip: skip },
-                        { $limit: limit },
+                        ...(usePagination ? [{ $skip: skip }, { $limit: limit }] : [])
                     ],
                     totalCount: [
                         { $count: "count" }
@@ -219,14 +220,16 @@ const getAddToCartList = async (_req, _res) => {
             .json(success(list, "Add to cart fetch successfully.",
                 {
                     total,
-                    page: page,
-                    limit: limit,
-                    totalPages: Math.ceil(total / limit),
+                    page: usePagination ? page : 1,
+                    limit: usePagination ? limit : total,
+                    totalPages: usePagination ? Math.ceil(total / limit) : 1,
                 }
             ));
     } catch (err) {
         return _res.status(500).json(error(500, err.message));
     }
 };
+
+
 
 module.exports = { createAddToCartList, getAddToCartList }

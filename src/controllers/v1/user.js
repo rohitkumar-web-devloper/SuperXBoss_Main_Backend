@@ -10,7 +10,7 @@ const loginUser = async (_req, _res) => {
     try {
         const { error: customError, value } = userLoginSchema.validate(_req.body);
         if (customError) {
-            return _res.status(400).json({ error: customError.details[0].message });
+            return _res.status(400).json(error(400, customError.details[0].message));
         }
 
         const existingUser = await UserModal.findOne({ email: value.email });
@@ -20,7 +20,7 @@ const loginUser = async (_req, _res) => {
 
         const isMatch = await comparePassword(value.password, existingUser.password);
         if (!isMatch) {
-            return _res.status(401).json({ error: 'Invalid email or password' });
+            return _res.status(401).json(error(401, "Invalid email or password"));
         }
 
         const userObj = existingUser.toObject();
@@ -35,7 +35,7 @@ const loginUser = async (_req, _res) => {
 
     } catch (err) {
         console.error('Login error:', err);
-        return _res.status(500).json({ error: 'Internal Server Error' });
+        return _res.status(500).json(error(500, "Internal Server Error"));
     }
 };
 const logoutUser = async (_req, _res) => {
@@ -43,19 +43,19 @@ const logoutUser = async (_req, _res) => {
         const { _id } = _req.user
 
         if (!_id) {
-            return _res.status(400).json({ error: '_id is required' });
+            return _res.status(400).json(error(400, "_id is required"));
         }
 
         const user = await UserModal.findById(_id);
         if (!user) {
-            return _res.status(404).json({ error: 'User not found' });
+            return _res.status(404).json(404, "User not found");
         }
 
         // Remove the access_token
         user.access_token = '';
         await user.save();
 
-        return _res.status(200).json(success({}, 'Logout successful'));
+        return _res.status(200).json(success(user, 'Logout successful'));
 
     } catch (err) {
         console.error('Logout error:', err);

@@ -24,12 +24,20 @@ const customerSchema = new mongoose.Schema(
             trim: true,
             validate: {
                 validator: function (v) {
-                    return /^\d{10}$/.test(v); // Exactly 10 digits
+                    return /^\d{10}$/.test(v);
                 },
                 message: props => `${props.value} is not a valid 10-digit mobile number!`
             }
         },
         state: {
+            type: String,
+            trim: true
+        },
+        city: {
+            type: String,
+            trim: true
+        },
+        address: {
             type: String,
             trim: true
         },
@@ -40,32 +48,30 @@ const customerSchema = new mongoose.Schema(
         refer_code: {
             type: String,
             trim: true,
-            uppercase: true
+            uppercase: true,
+            unique: true,
+            sparse: true
         },
         reference_code: {
             type: String,
             trim: true,
             uppercase: true
         },
-        point: {
-            type: String,
-            default: '0'
-        },
-        language: {
-            type: String,
-            default: 'en'
+        points: {
+            type: Number,
+            default: 0
         },
         type: {
             type: String,
-            default: ''
+            default: 'customer'
         },
         status: {
             type: Boolean,
             default: true
         },
         wallet_amount: {
-            type: String,
-            default: '0.00'
+            type: Number,
+            default: 0
         },
         business_type: {
             type: String,
@@ -112,6 +118,7 @@ const customerSchema = new mongoose.Schema(
     },
     {
         timestamps: true,
+        versionKey: false,
         toJSON: { virtuals: true },
         toObject: { virtuals: true }
     }
@@ -126,6 +133,35 @@ customerSchema.virtual('full_name').get(function () {
 customerSchema.index({ mobile: 1 }, { unique: true }); // Mobile should be unique
 // customerSchema.index({ email: 1 }, { unique: true, sparse: true });
 customerSchema.index({ refer_code: 1 }, { unique: true, sparse: true });
+
+
+const generateReferCode = () => {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+        result += characters.charAt(Math.floor(Math.random() * characters.length));
+    }
+    return result;
+};
+
+// Pre-save hook to generate unique refer_code
+customerSchema.pre('save', async function (next) {
+    const doc = this;
+
+    if (!doc.isNew || doc.refer_code) return next();
+
+    let unique = false;
+    let code;
+
+    while (!unique) {
+        code = generateReferCode();
+        const existing = await mongoose.models.customers.findOne({ refer_code: code });
+        if (!existing) unique = true;
+    }
+
+    doc.refer_code = code;
+    next();
+});
 
 const CustomerModal = mongoose.model('customers', customerSchema);
 

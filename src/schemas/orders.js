@@ -142,7 +142,10 @@ const OrderListSchema = new Schema(
         walletAmountUse: { type: Number, default: 0 },
         pointUse: { type: Number, default: 0 },
         earnPoints: { type: Number, default: 0 },
-
+        updatedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'users'
+        },
         // Identifiers & metadata
         orderNo: { type: String, trim: true, unique: true, sparse: true }, // e.g., "ORD-2025-000123"
         meta: { type: Schema.Types.Mixed, default: {} },
@@ -169,20 +172,6 @@ OrderListSchema.index({ customer_id: 1, createdAt: -1 });
 OrderListSchema.index({ status: 1, createdAt: -1 });
 OrderListSchema.index({ 'payment.status': 1, createdAt: -1 });
 
-/* -------------------------- Summary Auto-Compute -------------------------- */
-
-OrderListSchema.pre('validate', function (next) {
-    if (Array.isArray(this.items) && this.items.length) {
-        const subtotal = this.items.reduce((acc, i) => acc + (Number(i.lineSubtotal) || 0), 0);
-        const taxTotal = this.items.reduce((acc, i) => acc + (Number(i.taxAmount) || 0), 0);
-        const totalQty = this.items.reduce((acc, i) => acc + (Number(i.qty) || 0), 0);
-        this.summary.subtotal = money2(subtotal);
-        this.summary.taxTotal = money2(taxTotal);
-        this.summary.grandTotal = money2(subtotal + taxTotal);
-        this.summary.totalQty = totalQty;
-    }
-    next();
-});
 
 /* --------------------------------- Export -------------------------------- */
 

@@ -29,6 +29,7 @@ const UnitSchema = new mongoose.Schema(
         },
     },
     {
+        versionKey: false,
         timestamps: true, // adds createdAt and updatedAt automatically
     }
 );

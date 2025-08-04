@@ -154,7 +154,8 @@ const productSchema = new mongoose.Schema({
     default: [],
   },
 }, {
-  timestamps: true
+  timestamps: true,
+  versionKey: false,
 });
 
 function arrayLimit(val) {

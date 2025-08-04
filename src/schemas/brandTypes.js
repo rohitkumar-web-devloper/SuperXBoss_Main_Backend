@@ -6,7 +6,7 @@ const brandTypeSchema = new mongoose.Schema({
         unique: true,
         required: true,
     },
-}, { timestamps: true });
+}, { timestamps: true, versionKey: false, });
 
 const BrandTypeModel = mongoose.model('brand_types', brandTypeSchema);
 

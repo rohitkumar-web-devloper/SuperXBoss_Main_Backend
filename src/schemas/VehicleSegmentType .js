@@ -26,6 +26,7 @@ const vehicleSegmentTypeSchema = new mongoose.Schema(
     },
   },
   {
+    versionKey: false,
     timestamps: true, // Automatically adds createdAt and updatedAt
   }
 );

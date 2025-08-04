@@ -114,7 +114,7 @@ const updateBrand = async (_req, _res) => {
 };
 const getBrands = async (_req, _res) => {
     try {
-        const { active, pagination = "true", type } = _req.query || {}
+        const { active, pagination = "true", type, brand_day } = _req.query || {}
         const usePagination = pagination === "true";
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
@@ -126,6 +126,9 @@ const getBrands = async (_req, _res) => {
 
         if (type) {
             matchType["brand_type.name"] = type?.trim();
+        }
+        if (brand_day) {
+            matchType["brand_day"] = brand_day == "true"
         }
         if (search) {
             matchStage.name = { $regex: search, $options: "i" };
@@ -428,9 +431,7 @@ const getActiveBrandCategories = async (_req, _res) => {
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
-        let match = {
-
-        }
+        let match = {}
         if (search) {
             match["categories.name"] = {
                 $regex: search,
@@ -504,7 +505,7 @@ const getBrandNestedCategories = async (_req, _res) => {
             {
                 $group: {
                     _id: '$brand_id',
-                    rootIds: { $addToSet: '$`categories`' } // unique root category ids for this brand
+                    rootIds: { $addToSet: '$categories' } // unique root category ids for this brand
                 }
             },
 
@@ -562,6 +563,7 @@ const getBrandNestedCategories = async (_req, _res) => {
                 }
             }
         ]);
+
 
         // Build nested tree per brand (object-wise children) in memory
         const result = rows.map(({ brand, categoriesFlat }) => {

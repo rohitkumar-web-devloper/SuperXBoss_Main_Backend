@@ -49,8 +49,7 @@ const userValidationSchema = Joi.object({
 
     password: Joi.when('type', {
         is: Joi.not('customer'),
-        then: Joi.string().min(6).required().messages({
-            'string.min': 'Password must be at least 6 characters',
+        then: Joi.string().required().messages({
             'any.required': 'Password is required for non-customer users',
         }),
         otherwise: Joi.string().optional().allow(''),
@@ -65,8 +64,7 @@ const userLoginSchema = Joi.object({
     }),
     password: Joi.when('type', {
         is: Joi.not('customer'),
-        then: Joi.string().min(6).required().messages({
-            'string.min': 'Password must be at least 6 characters',
+        then: Joi.string().required().messages({
             'any.required': 'Password is required for non-customer users',
         }),
         otherwise: Joi.string().optional().allow(''),
@@ -114,8 +112,7 @@ const userUpdateSchema = Joi.object({
 
     password: Joi.when('type', {
         is: Joi.not('customer'),
-        then: Joi.string().min(6).optional().messages({
-            'string.min': 'Password must be at least 6 characters',
+        then: Joi.string().optional().messages({
         }),
         otherwise: Joi.string().optional().allow(''),
     })

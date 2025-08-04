@@ -207,7 +207,6 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
-
         const { vehicle = "", brand_id, year, segment, categories } = _req?.query;
         const { _id, type } = _req.user;
         const hasUser = type === "customer" ? mongoose.Types.ObjectId.isValid(_id) : false
@@ -215,10 +214,7 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
 
         let vehicleIds = [];
         if (vehicle) {
-            vehicleIds = vehicle
-                .split(",")
-                .filter(id => mongoose.Types.ObjectId.isValid(id))
-                .map(id => new mongoose.Types.ObjectId(id));
+            vehicleIds = vehicle.split(",").filter(id => mongoose.Types.ObjectId.isValid(id)).map(id => new mongoose.Types.ObjectId(id));
         }
 
         let matchStage = { status: true };
@@ -228,11 +224,7 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
         }
         let brandIds = [];
         if (brand_id) {
-            matchStage.brand_id = new mongoose.Types.ObjectId(brand_id);
-            brandIds = brand_id
-                .split(",")
-                .filter(id => mongoose.Types.ObjectId.isValid(id))
-                .map(id => new mongoose.Types.ObjectId(id));
+            brandIds = brand_id.split(",").filter(id => mongoose.Types.ObjectId.isValid(id)).map(id => new mongoose.Types.ObjectId(id));
             if (brandIds.length > 0) {
                 matchStage.brand_id = { $in: brandIds };
             }
@@ -242,8 +234,6 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
         }
 
         let segment_data = [];
-        console.log(segment);
-
         if (segment) {
             segment_data = typeof segment === "string"
                 ? [new mongoose.Types.ObjectId(segment)]
@@ -792,6 +782,7 @@ const getProductsById = async (_req, _res) => {
     try {
         const { productId } = _req.params
         const { type, _id } = _req.user
+        const userObjectId = hasUser ? new mongoose.Types.ObjectId(_id) : null;
         const hasUser = type == "customer" ? mongoose.Types.ObjectId.isValid(_id) : false
 
         const aggregationPipeline = [
@@ -923,6 +914,73 @@ const getProductsById = async (_req, _res) => {
                                 discount_customer_price: { $first: "$discount_customer_price" },
                             }
                         },
+                        ...(hasUser
+                            ? [
+                                {
+                                    $lookup: {
+                                        from: "wish_lists",
+                                        let: { productId: "$_id", userId: userObjectId },
+                                        pipeline: [
+                                            {
+                                                $match: {
+                                                    $expr: {
+                                                        $and: [
+                                                            { $eq: ["$product_id", "$$productId"] },
+                                                            { $eq: ["$customer_id", "$$userId"] },
+                                                            { $eq: ["$isAdded", true] },
+                                                        ],
+                                                    },
+                                                },
+                                            },
+                                            { $limit: 1 }, // small optimization
+                                        ],
+                                        as: "wishListData",
+                                    },
+                                },
+                                {
+                                    $addFields: {
+                                        wishList: { $gt: [{ $size: "$wishListData" }, 0] },
+                                    },
+                                },
+                                { $project: { wishListData: 0 } },
+                            ]
+                            : []),
+                        ...(hasUser
+                            ? [
+                                {
+                                    $lookup: {
+                                        from: "add_to_carts",
+                                        let: { productId: "$_id", userId: userObjectId },
+                                        pipeline: [
+                                            {
+                                                $match: {
+                                                    $expr: {
+                                                        $and: [
+                                                            { $eq: ["$product_id", "$$productId"] },
+                                                            { $eq: ["$customer_id", "$$userId"] },
+                                                            { $eq: ["$isCheckedOut", false] }
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            { $limit: 1 }
+                                        ],
+                                        as: "addToCartDetails"
+                                    }
+                                },
+                                {
+                                    $unwind: {
+                                        path: "$addToCartDetails",
+                                        preserveNullAndEmptyArrays: true
+                                    }
+                                },
+                                {
+                                    $addFields: {
+                                        "addToCartQty": "$addToCartDetails.qty"
+                                    }
+                                }
+                            ]
+                            : []),
                     ],
                 }
             }

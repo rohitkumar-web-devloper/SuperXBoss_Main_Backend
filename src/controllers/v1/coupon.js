@@ -88,15 +88,24 @@ const updateCoupon = async (_req, _res) => {
 };
 const getCoupon = async (_req, _res) => {
     try {
-        const { code, status } = _req.query;
+        const { code, status, pagination = "true" } = _req.query;
+        const usePagination = pagination === "true";
         const { _id, type } = _req.user
+        const page = parseInt(_req.query.page) || 1;
+        const limit = parseInt(_req.query.page_size) || 15;
+        const skip = (page - 1) * limit;
         const hasUser = type == "customer" ? mongoose.Types.ObjectId.isValid(_id) : false
         const match = {};
         if (code) {
             match.code = { $regex: code, $options: 'i' };
         }
-        if (status !== undefined) {
-            match.status = status === 'true';
+        console.log(status);
+
+        if (status === 'true') {
+            const now = new Date();
+            match.start_date = { $lte: now };
+            match.end_date = { $gte: now };
+            match.status = true;
         }
 
         const result = await CouponModel.aggregate([
@@ -150,12 +159,33 @@ const getCoupon = async (_req, _res) => {
                     'updatedBy': 1,
                 }
             },
+
             {
-                $sort: { createdAt: -1 }
+                $facet: {
+                    data: [
+                        {
+                            $sort: { createdAt: -1 }
+                        },
+                        ...(usePagination ? [{ $skip: skip }, { $limit: limit }] : []),
+                    ],
+                    totalCount: [
+                        { $count: "count" }
+                    ]
+
+                }
             }
         ]);
+        let list = result[0].data;
+        const total = result[0].totalCount[0]?.count || result.length;
 
-        return _res.status(200).json(success(result, "Coupon(s) fetched successfully"));
+        return _res.status(200).json(success(list, "Coupon(s) fetched successfully",
+            {
+                total,
+                page: usePagination ? page : 1,
+                limit: usePagination ? limit : total,
+                totalPages: usePagination ? Math.ceil(total / limit) : 1,
+            }
+        ));
     } catch (err) {
         console.error('Get coupon error:', err);
         return _res.status(500).json(error(500, 'Internal server error'));

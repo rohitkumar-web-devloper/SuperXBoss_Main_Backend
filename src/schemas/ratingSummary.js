@@ -27,7 +27,12 @@ const ratingSummarySchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
-});
+},
+    {
+        timestamps: true,
+        versionKey: false,
+    }
+);
 
 const RatingSummary = mongoose.model('rating_summary', ratingSummarySchema);
 

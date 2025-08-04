@@ -42,7 +42,8 @@ const CategorySchema = new mongoose.Schema({
     },
 },
     {
-        timestamps: true // Automatically adds createdAt and updatedAt
+        timestamps: true, // Automatically adds createdAt and updatedAt
+        versionKey: false,
     });
 
 const CategoryModal = mongoose.model('categories', CategorySchema);

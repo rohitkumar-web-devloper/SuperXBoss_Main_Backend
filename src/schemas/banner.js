@@ -32,6 +32,7 @@ const bannerSchema = new mongoose.Schema(
   },
   {
     timestamps: true, // adds createdAt and updatedAt automatically
+    versionKey: false,
   }
 );
 
