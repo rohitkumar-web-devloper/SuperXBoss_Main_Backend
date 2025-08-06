@@ -10,6 +10,7 @@ const bannerSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'products',
       required: true,
+      index: true
     },
     status: {
       type: Boolean,

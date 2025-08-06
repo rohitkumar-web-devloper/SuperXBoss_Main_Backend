@@ -29,7 +29,8 @@ const customerSchema = new mongoose.Schema(
             trim: true,
             uppercase: true,
             unique: true,
-            sparse: true
+            sparse: true,
+            index: true
         },
         reference_code: {
             type: String,
@@ -109,8 +110,6 @@ const customerSchema = new mongoose.Schema(
 
 // Indexes
 customerSchema.index({ mobile: 1 }, { unique: true }); // Mobile should be unique
-// customerSchema.index({ email: 1 }, { unique: true, sparse: true });
-customerSchema.index({ refer_code: 1 }, { unique: true, sparse: true });
 
 
 const generateReferCode = () => {

@@ -6,6 +6,7 @@ const brandCategoriesSchema = new mongoose.Schema(
             type: mongoose.Schema.Types.ObjectId,
             ref: 'brands',
             required: true,
+            index: true
         },
         categories: {
             type: mongoose.Schema.Types.ObjectId,

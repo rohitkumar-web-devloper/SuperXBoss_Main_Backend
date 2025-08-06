@@ -65,7 +65,7 @@ const gerAddresses = async (_req, _res) => {
 
     try {
         const { _id } = _req.user
-        const address = await AddressModel.find({ customer: _id, status: true })
+        const address = await AddressModel.find({ customer: _id, status: true }).sort({ isDefault: -1 })
 
         return _res.status(201).json(success(address));
     } catch (err) {

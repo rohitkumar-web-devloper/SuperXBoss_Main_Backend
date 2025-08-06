@@ -7,7 +7,8 @@ const couponSchema = new mongoose.Schema(
       required: [true, 'Coupon code is required'],
       unique: true,
       trim: true,
-      uppercase: true
+      uppercase: true,
+      index: true
     },
     amount: {
       type: Number,
@@ -53,7 +54,6 @@ const couponSchema = new mongoose.Schema(
 );
 
 // Indexes
-couponSchema.index({ code: 1 }, { unique: true });
 couponSchema.index({ status: 1 });
 couponSchema.index({ end_date: 1 });
 

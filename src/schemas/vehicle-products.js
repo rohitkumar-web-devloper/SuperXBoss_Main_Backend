@@ -5,21 +5,25 @@ const VehicleProductSchema = new mongoose.Schema(
         product_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'products',
-            required: true
+            required: true,
+            index: true
         },
         brand_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'brands',
-            required: true
+            required: true,
+            index: true
         },
         vehicle_ids: {
             type: [mongoose.Schema.Types.ObjectId],
             ref: 'vehicles',
-            required: true
+            required: true,
+            index: true
         },
         categories: {
             type: [mongoose.Schema.Types.ObjectId],
             ref: 'categories',
+            index: true
         },
         status: {
             type: Boolean,

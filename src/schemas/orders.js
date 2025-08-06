@@ -45,7 +45,7 @@ const orderItemSchema = new Schema(
         lineTotal: { type: Number, required: true, min: 0, set: money2 },    // lineSubtotal + taxAmount
 
         // Loyalty / points if applicable
-        point: { type: Number, min: 0, default: 0 },
+        points: { type: Number, min: 0, default: 0 },
     },
     { _id: false }
 );

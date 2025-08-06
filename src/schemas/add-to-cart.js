@@ -5,12 +5,14 @@ const AddToCartSchema = new mongoose.Schema(
         customer_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'customers',
-            required: true
+            required: true,
+            index: true
         },
         product_id: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'products',
-            required: true
+            required: true,
+            index: true
         },
         qty: {
             type: Number,

@@ -5,6 +5,7 @@ const { CustomerModal } = require('../../schemas/customers');
 const { customerLoginSchema, customerVerifyOtpSchema, customerUpdateSchema } = require("../../Validation/customer");
 const { generateToken } = require("../../Helper");
 const { AddressModel } = require("../../schemas/address");
+const { PointsModel } = require("../../schemas/points");
 
 const loginCustomer = async (_req, _res) => {
     try {
@@ -98,8 +99,6 @@ const logoutCustomer = async (_req, _res) => {
 };
 const updateCustomer = async (_req, _res) => {
     try {
-        console.log(_req.body, "_req.body");
-
         const { error: customError, value } = customerUpdateSchema.validate(
             { ..._req.body, profile: _req.file },
             { abortEarly: false }
@@ -140,6 +139,14 @@ const updateCustomer = async (_req, _res) => {
             await CustomerModal.findByIdAndUpdate(referringUser._id, {
                 $inc: { points: 100 }
             });
+            const addPoints = new PointsModel({
+                customer_id: referringUser._id,
+                source: "referral",
+                type: "credit",
+                points: 100,
+
+            })
+            await addPoints.save()
         }
 
         delete value.reference_code;
@@ -177,6 +184,15 @@ const updateCustomer = async (_req, _res) => {
             mobile
 
         });
+        if (reference_code) {
+            const addPoints = new PointsModel({
+                customer_id: customer,
+                source: "joining",
+                type: "credit",
+                points: rewardPoints,
+            })
+            await addPoints.save()
+        }
 
         const updatedCustomer = await CustomerModal.findByIdAndUpdate(customerId, updatedData, { new: true });
         const { createdAt, updatedAt, ...rest } = updatedCustomer.toObject();
@@ -219,8 +235,9 @@ const getCustomers = async (_req, _res) => {
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
         const search = _req.query.search || "";
-        const match = {}
-
+        const match = {
+            type: { $ne: "" }
+        }
         if (search) {
             match.$or = [
                 {

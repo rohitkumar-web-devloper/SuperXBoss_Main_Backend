@@ -8,6 +8,9 @@ const { OrderListModel } = require("../../schemas/orders");
 const { CustomerModal } = require("../../schemas/customers");
 const { AddToCartModel } = require("../../schemas/add-to-cart");
 const crypto = require('crypto');
+const { razorpay } = require("../../middleware/razorpay");
+const { PointsModel } = require("../../schemas/points");
+// const { admin } = require("../../Helper/fireBase-admin");
 // const createOrder = async (_req, _res) => {
 //     try {
 //         const { _id, type = "customer" } = _req.user;
@@ -282,6 +285,13 @@ const createOrder = async (_req, _res) => {
             ? Math.max(0, (grandTotalB2B - couponValue - pointValue - WalletValue))
             : Math.max(0, grandTotalCustomer - couponValue - pointValue - WalletValue);
         finalAmount = parseFloat(finalAmount.toFixed(2))
+        const finalAmountPaise = parseInt(finalAmount * 100);
+        const razorpayOrder = await razorpay.orders.create({
+            amount: finalAmountPaise,
+            currency: "INR",
+            receipt: `receipt_${orderNo}`,
+            payment_capture: 1,
+        });
 
         const StoreDataInDb = {
             customerType: type,
@@ -323,10 +333,10 @@ const createOrder = async (_req, _res) => {
             shippingAddress: shippingAddress,
             payment: {
                 status: "pending",
-                rzpOrderId: "",
+                rzpOrderId: razorpayOrder.id,
                 rzpPaymentId: "",
                 rzpSignature: "",
-                rzpAmount: "",
+                rzpAmount: finalAmountPaise,
                 method: "",
                 email: "",
                 name: "",
@@ -354,6 +364,11 @@ const createOrder = async (_req, _res) => {
                 end_date: couponApplied.end_date,
                 amount: couponValue
             } : null,
+            razorpay: {
+                order_id: razorpayOrder.id,
+                amount: finalAmountPaise,
+                currency: "INR",
+            },
             final_amount: finalAmount,
             customer_type: type,
             totalDiscount: grandTotalDiscount
@@ -474,13 +489,46 @@ const paymentCallback = async (req, res) => {
             .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
             .update(razorpay_order_id + "|" + razorpay_payment_id)
             .digest("hex");
-
+        console.warn("Signature mismatch", {
+            expected: generated_signature,
+            received: razorpay_signature,
+        });
         if (generated_signature !== razorpay_signature) {
             return res.status(400).json(error(400, "Invalid payment signature"));
         }
+        // ✅ Verify payment is actually captured (MOST IMPORTANT PART)
+        const payment = await razorpay.payments.fetch(razorpay_payment_id);
 
-        // Update order payment details
+        if (!payment || payment.status !== "captured") {
+            return res.status(400).json(error(400, "Payment not completed or not captured yet"));
+        }
+
+        // ✅ Update product stock
+        const stockUpdateResults = [];
+
+        for (const item of order.items) {
+            const productId = item.product;
+            const quantity = item.qty;
+
+            const updatedProduct = await ProductModel.findOneAndUpdate(
+                { _id: productId },
+                { $inc: { item_stock: -quantity } },
+                { new: true }
+            );
+
+            if (!updatedProduct) {
+                return res.status(400).json(error(400, `Insufficient stock for product: ${productId}`));
+            }
+
+            stockUpdateResults.push({
+                productId,
+                newStock: updatedProduct.item_stock
+            });
+        }
+
+
         order.payment = {
+            ...order.payment,
             status: "paid",
             rzpOrderId: razorpay_order_id,
             rzpPaymentId: razorpay_payment_id,
@@ -489,14 +537,51 @@ const paymentCallback = async (req, res) => {
             method,
             email,
             name,
-            contact
+            contact,
+            referenceId: razorpay_payment_id // optional but useful
         };
         order.status = "confirmed";
 
-        await order.save();
 
+        await AddToCartModel.updateMany(
+            {
+                customer_id: order.customer_id, // match customer
+                product_id: { $in: order.items.map((item) => item.product) } // match all ordered products
+            },
+            {
+                $set: { isCheckedOut: true } // mark as checked out
+            }
+        );
+        // Step 8: Handle Points (Earned & Used)
+        const pointOps = [];
+
+        if (order.earnPoints) {
+            pointOps.push(
+                new PointsModel({
+                    customer_id: order.customer_id,
+                    source: "product_purchase",
+                    type: "credit",
+                    points: order.earnPoints,
+                }).save()
+            );
+        }
+
+        if (order.pointUse) {
+            pointOps.push(
+                new PointsModel({
+                    customer_id: order.customer_id,
+                    source: "product_purchase",
+                    type: "debit",
+                    points: order.pointUse,
+                }).save()
+            );
+        }
+
+        await Promise.all(pointOps);
+        await order.save();
         return res.status(200).json(success({
             orderNo: order.orderNo,
+            stockUpdateResults,
             payment_status: "paid",
             message: "Payment confirmed and order updated."
         }));
@@ -509,14 +594,53 @@ const paymentCallback = async (req, res) => {
 
 const updateOrder = async (_req, _res) => {
     try {
-        const { _id, } = _req.user;
-        const { order_id, status } = _req.body;
-
+        const { _id } = _req.user;
+        const { order_id, status, customer } = _req.body;
         const order = await OrderListModel.findById(order_id)
+        // const customerInfo = await CustomerModal.findById(customer)
         order.status = status
         order.updatedBy = _id
         console.log(order);
         await order.save()
+
+
+        // 🎯 Determine notification content
+        let notificationTitle = "Order Update";
+        let notificationBody = "";
+
+        switch (status) {
+            case "confirmed":
+                notificationBody = `Your order #${order.orderNo} has been confirmed.`;
+                break;
+            case "shipped":
+                notificationBody = `Your order #${order.orderNo} has been shipped.`;
+                break;
+            case "delivered":
+                notificationBody = `Your order #${order.orderNo} has been delivered.`;
+                break;
+            case "cancelled":
+                notificationBody = `Your order #${order.orderNo} has been cancelled.`;
+                break;
+            default:
+                notificationBody = `Your order #${order.orderNo} status is updated to ${status}.`;
+        }
+
+        // ✅ Send FCM Notification if user has a deviceToken
+        // if (customerInfo?.fcm_token) {
+        //     await admin.messaging().send({
+        //         token: customerInfo?.fcm_token,
+        //         notification: {
+        //             title: notificationTitle,
+        //             body: notificationBody
+        //         },
+        //         data: {
+        //             orderId: order._id.toString(),
+        //             orderNo: order.orderNo,
+        //             status
+        //         }
+        //     });
+        // }
+
 
 
         return _res.status(201).json(success(order, "Order Update successfully."));
@@ -650,4 +774,4 @@ const getOrders = async (_req, _res) => {
     }
 
 }
-module.exports = { createOrder, getOrders, updateOrder };
+module.exports = { createOrder, getOrders, updateOrder, paymentCallback };

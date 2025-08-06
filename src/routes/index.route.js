@@ -23,6 +23,8 @@ const { asyncHandler } = require('../middleware/error-handler');
 const { getOverView } = require('../controllers/v1/dashboard');
 const orderRouter = require('./admin/order.route');
 const addressRouter = require('./admin/address.route');
+const pointsRouter = require('./admin/points.route');
+const WalletRouter = require('./admin/wallet.route');
 const router = express.Router();
 
 /* Routes */
@@ -46,6 +48,8 @@ router.use("/view", authenticateUser, recentViewRouter);
 router.use("/overview", authenticateUser, asyncHandler(getOverView));
 router.use("/order", authenticateUser, orderRouter);
 router.use("/address", authenticateUser, addressRouter);
+router.use("/points", authenticateUser, pointsRouter);
+router.use("/wallets", authenticateUser, WalletRouter);
 
 /* Export the router */
 module.exports = { router }
