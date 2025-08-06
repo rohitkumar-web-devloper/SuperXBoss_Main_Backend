@@ -53,33 +53,13 @@ const customerUpdateSchema = Joi.object({
     'any.required': 'Type is required.',
   }),
 
-  first_name: Joi.string().when('type', {
-    is: 'customer',
-    then: Joi.string().required().messages({
-      'string.empty': 'First name is required for customer.',
-    }),
-    otherwise: Joi.string().optional(),
+  name: Joi.string().required().messages({
+    'string.empty': 'Name is required for customer.',
   }),
 
-  last_name: Joi.string().when('type', {
-    is: 'customer',
-    then: Joi.string().required().messages({
-      'string.empty': 'Last name is required for customer.',
-    }),
-    otherwise: Joi.string().optional(),
-  }),
+  reference_code: Joi.string().allow("", null).optional(),
 
-  refer_code: Joi.string().optional(),
-
-  refrence_code: Joi.string().when('type', {
-    is: 'customer',
-    then: Joi.string().required().messages({
-      'string.empty': 'Reference code is required for customer.',
-    }),
-    otherwise: Joi.string().optional(),
-  }),
-
-  business_type: Joi.string().when('type', {
+  business_type: Joi.string().allow("", null).when('type', {
     is: 'b2b',
     then: Joi.string().required().messages({
       'string.empty': 'Business type is required for b2b.',
@@ -87,7 +67,7 @@ const customerUpdateSchema = Joi.object({
     otherwise: Joi.string().optional(),
   }),
 
-  business_name: Joi.string().when('type', {
+  business_name: Joi.string().allow("", null).when('type', {
     is: 'b2b',
     then: Joi.string().required().messages({
       'string.empty': 'Business name is required for b2b.',
@@ -95,7 +75,7 @@ const customerUpdateSchema = Joi.object({
     otherwise: Joi.string().optional(),
   }),
 
-  gst_number: Joi.when('type', {
+  gst_number: Joi.allow("", null).when('type', {
     is: 'b2b',
     then: Joi.string()
       .pattern(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/)
@@ -107,7 +87,7 @@ const customerUpdateSchema = Joi.object({
     otherwise: Joi.string().optional(),
   }),
 
-  business_contact_no: Joi.string().when('type', {
+  business_contact_no: Joi.string().allow("", null).when('type', {
     is: 'b2b',
     then: Joi.string().required().messages({
       'string.empty': 'Business contact number is required for b2b.',
@@ -115,19 +95,31 @@ const customerUpdateSchema = Joi.object({
     otherwise: Joi.string().optional(),
   }),
 
+  address: Joi.string().required().messages({
+    'string.empty': 'Address is required.',
+    'any.required': 'Address is required.',
+  }),
   state: Joi.string().required().messages({
     'string.empty': 'State is required.',
     'any.required': 'State is required.',
   }),
-
-  language: Joi.string().required().messages({
-    'string.empty': 'Language is required.',
-    'any.required': 'Language is required.',
+  city: Joi.string().required().messages({
+    'string.empty': 'City is required.',
+    'any.required': 'City is required.',
+  }),
+  pinCode: Joi.string().allow("", null).optional(),
+  longitude: Joi.number().optional().messages({
+    'string.empty': 'longitude is required.',
+    'any.required': 'longitude is required.',
+  }),
+  latitude: Joi.number().optional().messages({
+    'string.empty': 'latitude is required.',
+    'any.required': 'latitude is required.',
   }),
 
   email: Joi.string().email().optional().messages({
     'string.email': 'Email must be a valid email address.',
-  }),
+  }).label("Email"),
 
   profile: Joi.object().optional().messages({
     'object.base': 'Profile must be an object.',

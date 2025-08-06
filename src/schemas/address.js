@@ -3,48 +3,33 @@ const { Schema, Types } = mongoose;
 
 const addressSchema = new Schema(
     {
-        user: {
+        customer: {
             type: Types.ObjectId,
-            ref: 'users', // or 'customers', depending on your project
+            ref: 'users',
             required: true,
             index: true
         },
 
         label: {
             type: String,
-            enum: ['home', 'work', 'other'],
-            default: 'home'
+            enum: ['Home', 'Office', 'Other'],
+            default: 'Office'
         },
-
-        name: { type: String, required: true, trim: true },
-        mobile: { type: String, required: true, trim: true },
 
         // Address fields
-        addressLine1: { type: String, required: true, trim: true },
-        addressLine2: { type: String, trim: true },
-        landmark: { type: String, trim: true },
+        address: { type: String, required: true, trim: true },
+        name: { type: String, required: true, trim: true },
+        mobile: { type: String, required: true, trim: true },
         city: { type: String, required: true, trim: true },
         state: { type: String, required: true, trim: true },
-        pincode: { type: String, required: true, trim: true },
+        pinCode: { type: String, },
         country: { type: String, default: 'India', trim: true },
-
-        // Coordinates (optional, useful for delivery)
-        location: {
-            type: {
-                type: String,
-                enum: ['Point'],
-                default: 'Point'
-            },
-            coordinates: {
-                type: [Number], // [longitude, latitude]
-                default: undefined
-            }
+        coordinates: {
+            type: [Number], // [longitude, latitude]
+            default: []
         },
-
         isDefault: { type: Boolean, default: false }, // mark primary address
         type: { type: String, enum: ['shipping', 'billing', 'both'], default: 'shipping' },
-
-        meta: { type: Schema.Types.Mixed, default: {} } // optional extra info
     },
     {
         timestamps: true,

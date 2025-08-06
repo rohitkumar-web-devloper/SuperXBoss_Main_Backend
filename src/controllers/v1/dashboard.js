@@ -41,8 +41,6 @@ const getOverView = async (_req, _res) => {
             OrderListModel.countDocuments({ status: "refunded" }),
         ]);
 
-
-
         const data = {
             brand: {
                 active: activeBrands,

@@ -57,7 +57,7 @@ const getRecentViewHistory = async (_req, _res) => {
         const skip = (page - 1) * limit;
         const { _id, type } = _req.user;
 
-        const hasUser = type === "customer" && mongoose.Types.ObjectId.isValid(_id);
+        const hasUser = type != "vendor" && mongoose.Types.ObjectId.isValid(_id);
         const userObjectId = hasUser ? new mongoose.Types.ObjectId(_id) : null;
 
         const result = await RecentViewProductModel.aggregate([

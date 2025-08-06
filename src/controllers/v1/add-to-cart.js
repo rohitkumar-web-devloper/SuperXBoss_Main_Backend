@@ -61,7 +61,7 @@ const getAddToCartList = async (_req, _res) => {
         const { _id, type } = _req.user;
         const { pagination = "true" } = _req.query || {}
         const usePagination = pagination === "true";
-        const hasUser = type === "customer" && mongoose.Types.ObjectId.isValid(_id);
+        const hasUser = type != "vendor" && mongoose.Types.ObjectId.isValid(_id);
         const userObjectId = hasUser ? new mongoose.Types.ObjectId(_id) : null;
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;

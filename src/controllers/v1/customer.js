@@ -4,6 +4,7 @@ const unlinkOldFile = require("../../functions/unlinkFile");
 const { CustomerModal } = require('../../schemas/customers');
 const { customerLoginSchema, customerVerifyOtpSchema, customerUpdateSchema } = require("../../Validation/customer");
 const { generateToken } = require("../../Helper");
+const { AddressModel } = require("../../schemas/address");
 
 const loginCustomer = async (_req, _res) => {
     try {
@@ -97,19 +98,54 @@ const logoutCustomer = async (_req, _res) => {
 };
 const updateCustomer = async (_req, _res) => {
     try {
-        const { error: customError, value } = customerUpdateSchema.validate({ ..._req.body, profile: _req.file }, {
-            abortEarly: false,
-        });
+        console.log(_req.body, "_req.body");
+
+        const { error: customError, value } = customerUpdateSchema.validate(
+            { ..._req.body, profile: _req.file },
+            { abortEarly: false }
+        );
+
+
         if (customError) {
             return _res.json(error(400, customError.details.map(err => err.message)[0]));
         }
 
+        const { customerId, reference_code } = _req.body;
 
-        const { customerId } = _req.body;
         const existing = await CustomerModal.findById(customerId);
         if (!existing) {
             return _res.status(409).json(error(409, 'Customer not found'));
         }
+
+        // --- Prevent multiple referral uses ---
+        if (reference_code && existing.referred_by) {
+            return _res.status(400).json(error(400, 'Referral code already used'));
+        }
+
+        let referred_by = existing.referred_by || null;
+        let rewardPoints = existing.points || 0;
+        if (reference_code) {
+            const referringUser = await CustomerModal.findOne({ refer_code: reference_code });
+
+            if (!referringUser) {
+                return _res.status(404).json(error(404, 'Referral code is invalid'));
+            }
+
+            if (referringUser._id.equals(existing._id)) {
+                return _res.status(400).json(error(400, "You can't use your own referral code"));
+            }
+
+            referred_by = referringUser._id;
+            rewardPoints = rewardPoints + 50;
+            await CustomerModal.findByIdAndUpdate(referringUser._id, {
+                $inc: { points: 100 }
+            });
+        }
+
+        delete value.reference_code;
+        delete value.referred_by;
+        delete value.points;
+        delete value.refer_code;
 
         let profile = existing.profile;
         if (_req.file && _req.file.buffer) {
@@ -119,23 +155,40 @@ const updateCustomer = async (_req, _res) => {
             profile = await imageUpload(_req.file.originalname, _req.file.buffer, 'customer');
         }
 
+        // --- Prepare update ---
         const updatedData = {
             ...value,
             profile,
+            reference_code: reference_code,
+            referred_by,
+            points: rewardPoints
         };
+        const { address, latitude, longitude, pinCode, state, city, customerId: customer, name, mobile } = _req.body
+        const coordinates = [longitude, latitude]
+        new AddressModel({
+            coordinates,
+            address,
+            pinCode,
+            state,
+            city,
+            customer,
+            isDefault: true,
+            name,
+            mobile
 
-        const updatedBrand = await CustomerModal.findByIdAndUpdate(customerId, updatedData, { new: true });
-        const { createdAt, updatedAt, ...rest } = updatedBrand.toObject();
+        });
+
+        const updatedCustomer = await CustomerModal.findByIdAndUpdate(customerId, updatedData, { new: true });
+        const { createdAt, updatedAt, ...rest } = updatedCustomer.toObject();
+
         return _res.status(200).json(success(rest, 'Customer updated successfully'));
 
     } catch (err) {
         console.error(err);
-        return _res.status(500).json({
-            status: false,
-            message: 'Internal server error',
-        });
+        return _res.status(500).json(error(500, "Internal server error"));
     }
 };
+
 const updateCustomerStatus = async (_req, _res) => {
     try {
         const { status } = _req.body
@@ -165,9 +218,8 @@ const getCustomers = async (_req, _res) => {
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
         const search = _req.query.search || "";
-        const match = {
+        const match = {}
 
-        }
         if (search) {
             match.$or = [
                 {

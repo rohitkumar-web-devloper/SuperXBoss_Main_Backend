@@ -113,7 +113,7 @@ const getCategories = async (_req, _res) => {
         const search = _req.query.search || "";
         const matchStage = {};
         const { _id, type } = _req.user
-        const hasUser = type == "customer" ? mongoose.Types.ObjectId.isValid(_id) : false
+        const hasUser = type != "vendor" ? mongoose.Types.ObjectId.isValid(_id) : false
 
         if (search) {
             matchStage.$or = [

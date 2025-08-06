@@ -22,6 +22,7 @@ const recentViewRouter = require('./admin/recent-view-product.route');
 const { asyncHandler } = require('../middleware/error-handler');
 const { getOverView } = require('../controllers/v1/dashboard');
 const orderRouter = require('./admin/order.route');
+const addressRouter = require('./admin/address.route');
 const router = express.Router();
 
 /* Routes */
@@ -44,6 +45,7 @@ router.use("/add-to-cart", authenticateUser, AddToCartRouter);
 router.use("/view", authenticateUser, recentViewRouter);
 router.use("/overview", authenticateUser, asyncHandler(getOverView));
 router.use("/order", authenticateUser, orderRouter);
+router.use("/address", authenticateUser, addressRouter);
 
 /* Export the router */
 module.exports = { router }

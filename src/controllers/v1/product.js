@@ -209,7 +209,7 @@ const getVehicleAssignProductWithYear = async (_req, _res) => {
         const skip = (page - 1) * limit;
         const { vehicle = "", brand_id, year, segment, categories } = _req?.query;
         const { _id, type } = _req.user;
-        const hasUser = type === "customer" ? mongoose.Types.ObjectId.isValid(_id) : false
+        const hasUser = type != "vendor" ? mongoose.Types.ObjectId.isValid(_id) : false
         const userObjectId = hasUser ? new mongoose.Types.ObjectId(_id) : null;
 
         let vehicleIds = [];
@@ -511,7 +511,7 @@ const getProducts = async (_req, _res) => {
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
         const { _id, type } = _req.user
-        const hasUser = type == "customer" ? mongoose.Types.ObjectId.isValid(_id) : false
+        const hasUser = type != "vendor" ? mongoose.Types.ObjectId.isValid(_id) : false
         const userObjectId = hasUser ? new mongoose.Types.ObjectId(_id) : null;
 
         const matchStage = {};
@@ -783,7 +783,7 @@ const getProductsById = async (_req, _res) => {
         const { productId } = _req.params
         const { type, _id } = _req.user
         const userObjectId = hasUser ? new mongoose.Types.ObjectId(_id) : null;
-        const hasUser = type == "customer" ? mongoose.Types.ObjectId.isValid(_id) : false
+        const hasUser = type != "vendor" ? mongoose.Types.ObjectId.isValid(_id) : false
 
         const aggregationPipeline = [
             { $match: { _id: new mongoose.Types.ObjectId(productId), } },

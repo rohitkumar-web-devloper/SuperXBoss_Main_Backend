@@ -94,7 +94,7 @@ const getCoupon = async (_req, _res) => {
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;
-        const hasUser = type == "customer" ? mongoose.Types.ObjectId.isValid(_id) : false
+        const hasUser = type != "vendor" ? mongoose.Types.ObjectId.isValid(_id) : false
         const match = {};
         if (code) {
             match.code = { $regex: code, $options: 'i' };

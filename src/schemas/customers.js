@@ -2,12 +2,7 @@ const mongoose = require('mongoose');
 
 const customerSchema = new mongoose.Schema(
     {
-        first_name: {
-            type: String,
-            trim: true,
-            maxlength: 50
-        },
-        last_name: {
+        name: {
             type: String,
             trim: true,
             maxlength: 50
@@ -29,22 +24,6 @@ const customerSchema = new mongoose.Schema(
                 message: props => `${props.value} is not a valid 10-digit mobile number!`
             }
         },
-        state: {
-            type: String,
-            trim: true
-        },
-        city: {
-            type: String,
-            trim: true
-        },
-        address: {
-            type: String,
-            trim: true
-        },
-        pin_code: {
-            type: String,
-            trim: true
-        },
         refer_code: {
             type: String,
             trim: true,
@@ -57,13 +36,17 @@ const customerSchema = new mongoose.Schema(
             trim: true,
             uppercase: true
         },
+        referred_by: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "customers",
+        },
         points: {
             type: Number,
             default: 0
         },
         type: {
             type: String,
-            default: 'customer'
+            default: ''
         },
         status: {
             type: Boolean,
@@ -123,11 +106,6 @@ const customerSchema = new mongoose.Schema(
         toObject: { virtuals: true }
     }
 );
-
-// Virtual for full name
-customerSchema.virtual('full_name').get(function () {
-    return `${this.first_name || ''} ${this.last_name || ''}`.trim();
-});
 
 // Indexes
 customerSchema.index({ mobile: 1 }, { unique: true }); // Mobile should be unique

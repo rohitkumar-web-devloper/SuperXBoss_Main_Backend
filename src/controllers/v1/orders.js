@@ -544,7 +544,7 @@ const generateOrderNo = async (customer_id) => {
 const getOrders = async (_req, _res) => {
     try {
         const { _id, type } = _req.user
-        const hasUser = type == "customer" ? mongoose.Types.ObjectId.isValid(_id) : false
+        const hasUser = type != "vendor" ? mongoose.Types.ObjectId.isValid(_id) : false
         const page = parseInt(_req.query.page) || 1;
         const limit = parseInt(_req.query.page_size) || 15;
         const skip = (page - 1) * limit;

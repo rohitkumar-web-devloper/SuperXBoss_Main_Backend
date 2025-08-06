@@ -78,7 +78,7 @@ const getFAQs = async (_req, res) => {
         const search = _req.query.search || "";
         const { type, status } = _req.query;
         const { _id, type: useType } = _req.user
-        const hasUser = useType == "customer" ? mongoose.Types.ObjectId.isValid(_id) : false
+        const hasUser = useType != "vendor" ? mongoose.Types.ObjectId.isValid(_id) : false
 
         const matchStage = {};
         if (search) {
