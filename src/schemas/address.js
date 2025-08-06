@@ -30,20 +30,14 @@ const addressSchema = new Schema(
         },
         isDefault: { type: Boolean, default: false }, // mark primary address
         type: { type: String, enum: ['shipping', 'billing', 'both'], default: 'shipping' },
+        status: {
+            type: Boolean,
+            default: true,
+        },
     },
     {
         timestamps: true,
         versionKey: false,
-        minimize: false,
-        toJSON: {
-            virtuals: true,
-            transform: (_, ret) => {
-                ret.id = ret._id?.toString();
-                delete ret._id;
-                return ret;
-            }
-        },
-        toObject: { virtuals: true }
     }
 );
 

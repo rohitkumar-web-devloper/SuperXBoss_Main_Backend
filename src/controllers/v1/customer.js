@@ -165,7 +165,7 @@ const updateCustomer = async (_req, _res) => {
         };
         const { address, latitude, longitude, pinCode, state, city, customerId: customer, name, mobile } = _req.body
         const coordinates = [longitude, latitude]
-        new AddressModel({
+        const addressData = new AddressModel({
             coordinates,
             address,
             pinCode,
@@ -180,6 +180,7 @@ const updateCustomer = async (_req, _res) => {
 
         const updatedCustomer = await CustomerModal.findByIdAndUpdate(customerId, updatedData, { new: true });
         const { createdAt, updatedAt, ...rest } = updatedCustomer.toObject();
+        await addressData.save()
 
         return _res.status(200).json(success(rest, 'Customer updated successfully'));
 
