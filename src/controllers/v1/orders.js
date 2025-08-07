@@ -10,7 +10,7 @@ const { AddToCartModel } = require("../../schemas/add-to-cart");
 const crypto = require('crypto');
 const { razorpay } = require("../../middleware/razorpay");
 const { PointsModel } = require("../../schemas/points");
-// const { admin } = require("../../Helper/fireBase-admin");
+const { admin } = require("../../Helper/fireBase-admin");
 // const createOrder = async (_req, _res) => {
 //     try {
 //         const { _id, type = "customer" } = _req.user;
@@ -597,7 +597,7 @@ const updateOrder = async (_req, _res) => {
         const { _id } = _req.user;
         const { order_id, status, customer } = _req.body;
         const order = await OrderListModel.findById(order_id)
-        // const customerInfo = await CustomerModal.findById(customer)
+        const customerInfo = await CustomerModal.findById(customer)
         order.status = status
         order.updatedBy = _id
         console.log(order);
@@ -624,28 +624,36 @@ const updateOrder = async (_req, _res) => {
             default:
                 notificationBody = `Your order #${order.orderNo} status is updated to ${status}.`;
         }
+        if (customerInfo?.fcm_token) {
+            const message = {
+                token: customerInfo?.fcm_token,  // Target the user's device token
+                notification: {
+                    title: notificationTitle,  // Title of the notification
+                    body: notificationBody,  // Body of the notification with order status
+                },
+                data: {
+                    orderId: order._id.toString(),  // Pass the order ID in the data payload
+                    orderNo: order.orderNo,  // Pass the order number in the data payload
+                    status: status,  // Include the new order status
+                    screen: "Profile",
+                },
 
-        // ✅ Send FCM Notification if user has a deviceToken
-        // if (customerInfo?.fcm_token) {
-        //     await admin.messaging().send({
-        //         token: customerInfo?.fcm_token,
-        //         notification: {
-        //             title: notificationTitle,
-        //             body: notificationBody
-        //         },
-        //         data: {
-        //             orderId: order._id.toString(),
-        //             orderNo: order.orderNo,
-        //             status
-        //         }
-        //     });
-        // }
+            };
+
+            // Send the notification using Firebase Admin SDK
+            const data = await admin.messaging().send(message);
+            console.log('Notification sent successfully:', data);
+        } else {
+            console.log("No FCM token found for the customer.");
+        }
 
 
 
         return _res.status(201).json(success(order, "Order Update successfully."));
 
     } catch (err) {
+        console.log(err);
+
         return _res.status(500).json(error(500, err.message));
     }
 };

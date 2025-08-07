@@ -170,7 +170,7 @@ const updateCustomer = async (_req, _res) => {
             referred_by,
             points: rewardPoints
         };
-        const { address, latitude, longitude, pinCode, state, city, customerId: customer, name, mobile } = _req.body
+        const { address, latitude, longitude, pinCode, state, city, customerId: customer, name } = _req.body
         const coordinates = [longitude, latitude]
         const addressData = new AddressModel({
             coordinates,
@@ -181,7 +181,7 @@ const updateCustomer = async (_req, _res) => {
             customer,
             isDefault: true,
             name,
-            mobile
+            mobile: existing.mobile
 
         });
         if (reference_code) {
