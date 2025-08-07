@@ -4,6 +4,7 @@ const { imageUpload } = require("../../functions/imageUpload");
 const unlinkOldFile = require("../../functions/unlinkFile");
 const { CategoryModal } = require("../../schemas/categories");
 const { createCategorySchema, updateCategorySchema } = require("../../Validation/category");
+const { BrandCategoriesModel } = require("../../schemas/brands-categories");
 const createCategory = async (_req, _res) => {
     try {
         if (!_req?.body) {
@@ -205,5 +206,76 @@ const getCategories = async (_req, _res) => {
         return _req.status(500).json({ success: false, message: error.message });
     }
 };
+const getBrandCategories = async (_req, _res) => {
+    try {
+        const { pagination = "true" } = _req.query || {}
+        const usePagination = pagination === "true";
+        const page = parseInt(_req.query.page) || 1;
+        const limit = parseInt(_req.query.page_size) || 15;
+        const skip = (page - 1) * limit;
+        const search = _req.query.search || "";
+        const matchStage = {};
+        if (search) {
+            matchStage.$or = [
+                { name: { $regex: search, $options: "i" } }
+            ]
+        }
+        const aggregationPipeline = [
+            { $match: matchStage },
+            {
+                $lookup: {
+                    from: "categories",
+                    localField: "categories",
+                    foreignField: "_id",
+                    as: "categories",
+                    pipeline: [
+                        { $project: { name: 1, _id: 1, status: 1 } }
+                    ]
+                }
+            },
+            {
+                $unwind: {
+                    path: "$categories",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $match: {
+                    "categories.status": true
+                }
+            },
+            {
+                $facet: {
+                    data: [
+                        { $sort: { createdAt: -1 } },
+                        ...(usePagination ? [{ $skip: skip }, { $limit: limit }] : [])
+                    ],
+                    totalCount: [
+                        { $count: "count" }
+                    ]
+                }
+            }
+        ];
 
-module.exports = { createCategory, updateCategory, getCategories } 
+        const result = await BrandCategoriesModel.aggregate(aggregationPipeline);
+
+        const category = result[0].data.map(item => item.categories);
+        const total = result[0].totalCount[0]?.count || 0;
+
+        return _res.status(200).json(success(
+            category, "Success",
+            {
+                total,
+                page: usePagination ? page : 1,
+                limit: usePagination ? limit : total,
+                totalPages: usePagination ? Math.ceil(total / limit) : 1,
+            }
+        ));
+
+
+    } catch (error) {
+        return _req.status(500).json({ success: false, message: error.message });
+    }
+};
+
+module.exports = { createCategory, updateCategory, getCategories, getBrandCategories } 
