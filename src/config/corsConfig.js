@@ -3,7 +3,7 @@ const cors = require("cors")
 const configureCors = () => {
     return cors({
         origin: (origin, callback) => {
-            const allowOrgin = ["https://localhost:3000", "http://localhost:5173"]
+            const allowOrgin = ["https://localhost:3000", "http://localhost:5173", "https://super-x-boss.vercel.app"]
             // const allowOrgin = ["https://localhost:3000", "http://]
             if (!origin || allowOrgin.includes(origin)) {
                 callback(null, true)
