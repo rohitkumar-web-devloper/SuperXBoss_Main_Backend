@@ -1,0 +1,130 @@
+const Joi = require('joi');
+
+const customerLoginSchema = Joi.object({
+  mobile: Joi.string()
+    .pattern(/^[0-9]{10}$/)
+    .required()
+    .messages({
+      'string.base': 'Mobile number must be a string.',
+      'string.empty': 'Mobile number is required.',
+      'string.pattern.base': 'Mobile number must be exactly 10 digits.',
+      'any.required': 'Mobile number is required.',
+    }),
+});
+
+
+const customerVerifyOtpSchema = Joi.object({
+  mobile: Joi.string()
+    .pattern(/^[0-9]{10}$/)
+    .required()
+    .messages({
+      'string.base': 'Mobile number must be a string.',
+      'string.empty': 'Mobile number is required.',
+      'string.pattern.base': 'Mobile number must be exactly 10 digits.',
+      'any.required': 'Mobile number is required.',
+    }),
+
+  otp: Joi.string()
+    .pattern(/^[0-9]{4}$/)
+    .required()
+    .messages({
+      'string.base': 'OTP must be a string.',
+      'string.empty': 'OTP is required.',
+      'string.pattern.base': 'OTP must be exactly 4 digits.',
+      'any.required': 'OTP is required.',
+    }),
+  fcm_token: Joi.string()
+    .required()
+});
+
+
+
+const customerUpdateSchema = Joi.object({
+  customerId: Joi.string()
+    .required()
+    .messages({
+      'string.base': 'Customer ID must be a string.',
+      'string.empty': 'Customer ID cannot be empty.',
+      'any.required': 'Customer ID is required.',
+    }),
+
+  type: Joi.string().valid('customer', 'b2b').required().messages({
+    'any.only': 'Type must be either "customer" or "b2b".',
+    'any.required': 'Type is required.',
+  }),
+
+  name: Joi.string().required().messages({
+    'string.empty': 'Name is required for customer.',
+  }),
+
+  reference_code: Joi.string().allow("", null).optional(),
+
+  business_type: Joi.string().allow("", null).when('type', {
+    is: 'b2b',
+    then: Joi.string().required().messages({
+      'string.empty': 'Business type is required for b2b.',
+    }),
+    otherwise: Joi.string().optional(),
+  }),
+
+  business_name: Joi.string().allow("", null).when('type', {
+    is: 'b2b',
+    then: Joi.string().required().messages({
+      'string.empty': 'Business name is required for b2b.',
+    }),
+    otherwise: Joi.string().optional(),
+  }),
+
+  gst_number: Joi.allow("", null).when('type', {
+    is: 'b2b',
+    then: Joi.string()
+      .pattern(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/)
+      .required()
+      .messages({
+        'string.pattern.base': 'GST number must be a valid 15-character GSTIN.',
+        'string.empty': 'GST number is required for b2b.',
+      }),
+    otherwise: Joi.string().optional(),
+  }),
+
+  business_contact_no: Joi.string().allow("", null).when('type', {
+    is: 'b2b',
+    then: Joi.string().required().messages({
+      'string.empty': 'Business contact number is required for b2b.',
+    }),
+    otherwise: Joi.string().optional(),
+  }),
+
+  address: Joi.string().required().messages({
+    'string.empty': 'Address is required.',
+    'any.required': 'Address is required.',
+  }),
+  state: Joi.string().required().messages({
+    'string.empty': 'State is required.',
+    'any.required': 'State is required.',
+  }),
+  city: Joi.string().required().messages({
+    'string.empty': 'City is required.',
+    'any.required': 'City is required.',
+  }),
+  pinCode: Joi.string().allow("", null).optional(),
+  longitude: Joi.number().optional().messages({
+    'string.empty': 'longitude is required.',
+    'any.required': 'longitude is required.',
+  }),
+  latitude: Joi.number().optional().messages({
+    'string.empty': 'latitude is required.',
+    'any.required': 'latitude is required.',
+  }),
+
+  email: Joi.string().email().optional().messages({
+    'string.email': 'Email must be a valid email address.',
+  }).label("Email"),
+
+  profile: Joi.object().optional().messages({
+    'object.base': 'Profile must be an object.',
+  }),
+});
+
+
+module.exports = { customerLoginSchema, customerVerifyOtpSchema, customerUpdateSchema };

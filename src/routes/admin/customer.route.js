@@ -1,0 +1,14 @@
+const express = require("express");
+const customerRouter = express.Router();
+const { asyncHandler } = require("../../middleware/error-handler");
+const { upload } = require("../../middleware/upload");
+const { loginCustomer, verifyOTP, logoutCustomer, updateCustomer, getCustomers, getCustomersInfo, updateCustomerStatus } = require("../../controllers/v1/customer");
+const { authenticateUser } = require("../../middleware/authenticateUser");
+customerRouter.post('/login', asyncHandler(loginCustomer));
+customerRouter.post('/verify_otp', asyncHandler(verifyOTP));
+customerRouter.post('/logout', authenticateUser, asyncHandler(logoutCustomer));
+customerRouter.put('/', authenticateUser, upload.single('profile'), asyncHandler(updateCustomer));
+customerRouter.put('/status/:customerId', authenticateUser, asyncHandler(updateCustomerStatus));
+customerRouter.get('/', authenticateUser, asyncHandler(getCustomers));
+customerRouter.get('/info', authenticateUser, asyncHandler(getCustomersInfo));
+module.exports = customerRouter;

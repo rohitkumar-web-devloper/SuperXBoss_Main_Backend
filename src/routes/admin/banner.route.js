@@ -1,0 +1,11 @@
+const express = require("express");
+const bannerRouter = express.Router();
+const { asyncHandler } = require("../../middleware/error-handler");
+const { upload } = require("../../middleware/upload");
+const { createBanner, updateBanner, getBanners, getBannerPositionsData } = require("../../controllers/v1/banner");
+bannerRouter.post('/', upload.single('image'), asyncHandler(createBanner));
+bannerRouter.put('/:bannerId', upload.single('image'), asyncHandler(updateBanner));
+bannerRouter.get('/', asyncHandler(getBanners));
+bannerRouter.get('/position', asyncHandler(getBannerPositionsData));
+
+module.exports = bannerRouter;

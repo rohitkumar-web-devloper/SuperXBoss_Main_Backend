@@ -1,3 +1,4 @@
+const { required } = require('joi');
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
@@ -15,9 +16,19 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
+        default: "admin"
+    },
+    address: {
+        type: String,
         default: null
     },
     mobile: {
+        type: String,
+        required: true,
+        index: true,
+        unique: true
+    },
+    whatsapp: {
         type: String,
         required: true,
         index: true,
@@ -35,37 +46,33 @@ const userSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        index: true,
-        default:"vendor"
+        default: "vendor"
+    },
+    access_token: {
+        type: String,
+        default: ""
     },
     status: {
         type: Boolean,
         default: true,
         index: true,
     },
+    createdBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: false,
+        ref: 'users'
+    },
+    updatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'users'
+    },
     password: {
         type: String,
-        validate: {
-            validator: function (value) {
-                if (this.type !== "customer") {
-                    return typeof value === "string" && value.trim().length > 0;
-                }
-                return true;
-            },
-            message: "Password is required for non-customer users"
-        }
-    },
-    loginCount: {
-        type: Number,
-        default: 0
-    },
-    inActiveReason: {
-        type: String,
-        default: null
     },
 },
     {
-        timestamps: true // Automatically adds createdAt and updatedAt
+        versionKey: false,
+        timestamps: true
     });
 
 const UserModal = mongoose.model('users', userSchema);
