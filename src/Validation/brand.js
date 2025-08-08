@@ -90,7 +90,7 @@ const updateBrandSchema = Joi.object({
       'string.base': `"brand_segment" must contain string ObjectIds`,
       'any.invalid': `"brand_segment" must contain valid ObjectIds`,
     }))
-    .required()
+    .optional()
     .messages({
       'array.base': `"brand_segment" must be an array`,
       'any.required': `"brand_segment" is required`,
