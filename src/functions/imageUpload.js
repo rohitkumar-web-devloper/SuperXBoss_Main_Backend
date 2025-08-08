@@ -16,6 +16,8 @@ const imageUpload = async (originalname, buffer, folder) => {
 
     // Construct public URL (use env or fallback)
     const baseUrl = process.env.BASE_URL_UPLOAD || `http://localhost:${process.env.PORT || 4004}`;
+    console.log(baseUrl, "baseUrl");
+
 
     const publicUrl = `${baseUrl}/${folder}/${filename}`;
 
