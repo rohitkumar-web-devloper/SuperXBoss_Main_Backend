@@ -12,6 +12,7 @@ const { baseUploadPath } = require("./functions/imageUpload");
 const { cronCoupon } = require("./Helper/CronTabCouponStatus");
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 4004; // Fallback in case env is missing
 // Custom middlewares
 app.use(configureCors())
