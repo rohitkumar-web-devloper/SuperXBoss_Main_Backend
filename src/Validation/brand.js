@@ -96,11 +96,17 @@ const updateBrandSchema = Joi.object({
       'any.required': `"brand_segment" is required`,
     }),
   categories: Joi.array()
-    .items(Joi.string().custom(objectId).messages({
-      'string.base': `"categories" must contain string ObjectIds`,
-      'any.invalid': `"categories" must contain valid ObjectIds`,
-    }))
-    .optional(),
+    .items(
+      joiObjectId.messages({
+        'any.custom': `"categories" must contain valid ObjectIds`,
+      })
+    )
+    .single()
+    .optional()
+    .empty('')
+    .messages({
+      'array.base': `"categories" must be an array`,
+    }),
   sorting: Joi.number().default(0).messages({
     'number.base': `sorting must be a number`,
   }),
